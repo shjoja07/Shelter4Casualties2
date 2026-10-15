@@ -17,7 +17,7 @@ public class Main {
 
         boolean salir = false;
 
-        while (!salir) {
+        do{
             System.out.println("\n==========================================");
             System.out.println("   SISTEMA SHELTER 4 CASUALTIES - MENU   ");
             System.out.println("==========================================");
@@ -96,7 +96,7 @@ public class Main {
                 default:
                     System.out.println("Opcion no válida. Intente de nuevo.");
             }
-        }
+        }while (!salir);
 
         scanner.close();
     }
