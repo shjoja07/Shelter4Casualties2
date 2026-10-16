@@ -7,7 +7,7 @@ public class DamnificadoVulnerable extends Damnificado{
         super(dni, nombreCompleto, edad); 
         this.atencionMedica = atencionMedica; 
         this.enfermedadCronica = enfermedadCronica;  
-        this.estadoGestion = estadoGestacion; 
+        this.estadoGestacion = estadoGestacion; 
     }
 
     public void confirmacionAtencion(boolean atencion){
