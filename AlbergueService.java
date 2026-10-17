@@ -13,7 +13,7 @@ public class AlbergueService {
     // RF-01: Registrar nuevo albergue
     public void registrarAlbergue(Albergue albergue) {
         albergues.add(albergue);
-        System.out.println("✅ Albergue registrado: " + albergue.getNombre());
+        System.out.println(" Albergue registrado: " + albergue.getNombre());
     }
 
     // <include> Calcular prioridad de asignación
@@ -37,11 +37,11 @@ public class AlbergueService {
 
             if (albergue.tieneCupo()) {
                 albergue.setOcupacionActual(albergue.getOcupacionActual() + 1);
-                System.out.println("✅ " + damnificado.getNombre() + " (Prioridad " + prioridad + 
+                System.out.println("- " + damnificado.getNombre() + " (Prioridad " + prioridad + 
                                    ") ingresó a " + albergue.getNombre());
                 return true;
             } else {
-                System.out.println("⚠️ Albergue lleno. Invocando opción de derivación o filtrado...");
+                System.out.println("Albergue lleno. Invocando opción de derivación o filtrado...");
                 return false;
             }
         }
