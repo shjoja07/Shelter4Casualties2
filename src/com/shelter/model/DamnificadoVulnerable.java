@@ -1,3 +1,4 @@
+package com.shelter.model;
 public class DamnificadoVulnerable extends Damnificado{
     private boolean enfermedadCronica; 
     private boolean atencionMedica; 
