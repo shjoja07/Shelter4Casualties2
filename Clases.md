@@ -6,7 +6,6 @@ classDiagram
 
     class Main {
         +main(args: String[])
-        -opciones del menú 1 a 11
         -leerTexto()
         -leerEntero()
         -leerDecimal()
@@ -15,14 +14,12 @@ classDiagram
 
     class SphereConstantes {
         <<utility>>
-        +19 constantes static final
-        (mínimos Sphere 2018)
     }
 
     class AlbergueService {
         -albergues: List~Albergue~
-        +UMBRAL_AMARILLO: double$
-        +UMBRAL_ROJO: double$
+        +UMBRAL_AMARILLO: double
+        +UMBRAL_ROJO: double
         +registrarAlbergue(Albergue): boolean
         +registrarIngreso(String, Damnificado): boolean
         +registrarRecurso(String, Recurso): boolean
@@ -110,8 +107,6 @@ classDiagram
         +esCritico(): boolean
     }
 
-    note for TipoRecurso "AGUA, ALIMENTO y MEDICINA son recursos críticos."
-
     class Damnificado {
         <<abstract>>
         #dni: String
@@ -121,7 +116,6 @@ classDiagram
         #ultimaAsignacion: LocalDateTime
         +asignarCategoriaPorEdad(int)
         +determinarNivelPrioridad(): String
-        +getters / setters
     }
 
     class CategoriaEdad {
@@ -157,7 +151,7 @@ classDiagram
     Main ..> AsignacionRecurso : usa
     Main ..> AlbergueService : usa
 
-    SphereConstantes <.. AlbergueService : valores mínimos
+    SphereConstantes <.. AlbergueService : valores minimos
 
     AlbergueService "1" *-- "0..*" Albergue : gestiona
     AlbergueService ..> AsignacionRecurso : consulta prioridad
@@ -176,9 +170,17 @@ classDiagram
 
     Damnificado --> CategoriaEdad
 
-    %% Requisitos funcionales asociados a las operaciones
+    %% Informacion complementaria del modelo
 
-    note for AlbergueService "RF-01: registrarAlbergue\nRF-02: registrarIngreso\nRF-03: registrarRecurso\nRF-05: mostrarPanelSemaforo\nRF-06: validarMinimosSphere\nRF-07: filtrarAlbergues\nRF-08: derivarDamnificado y registrarSalida\nRF-09: consultarDisponibilidad y consultarAlbergue"
+    note for Main "El menu contiene las opciones 1 a 11. Los metodos de lectura son privados."
 
-    note for AsignacionRecurso "RF-04: asignar recursos"
+    note for SphereConstantes "Contiene 19 constantes static final correspondientes a los minimos Sphere 2018. Los nombres y valores individuales no fueron proporcionados."
+
+    note for TipoRecurso "AGUA, ALIMENTO y MEDICINA son recursos criticos."
+
+    note for Damnificado "Incluye getters y setters."
+
+    note for AlbergueService "RF-01: registrarAlbergue. RF-02: registrarIngreso. RF-03: registrarRecurso. RF-05: mostrarPanelSemaforo. RF-06: validarMinimosSphere. RF-07: filtrarAlbergues. RF-08: derivarDamnificado y registrarSalida. RF-09: consultarDisponibilidad y consultarAlbergue."
+
+    note for AsignacionRecurso "RF-04: asignar recursos."
 ```
