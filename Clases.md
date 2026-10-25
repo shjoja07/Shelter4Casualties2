@@ -1,3 +1,4 @@
+```mermaid
 classDiagram
     @startuml
     skinparam classAttributeIconSize 0
