@@ -82,6 +82,7 @@ classDiagram
         -unidad: String
         -cantidadDisponible: double
         -fechaVencimiento: LocalDate
+        +getTipo(): TipoRecurso
         +descontar(double): void
         +actualizar(double, LocalDate): void
         +estaVencido(LocalDate): boolean
@@ -177,6 +178,8 @@ classDiagram
     note for SphereConstantes "Contiene 19 constantes static final correspondientes a los minimos Sphere 2018. Los nombres y valores individuales no fueron proporcionados."
 
     note for TipoRecurso "AGUA, ALIMENTO y MEDICINA son recursos criticos."
+
+    note for Recurso "Incluye constructor y getters. Un recurso sin fecha de vencimiento (null) nunca esta vencido."
 
     note for Damnificado "Incluye getters y setters."
 
