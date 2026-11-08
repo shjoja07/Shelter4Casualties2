@@ -3,6 +3,7 @@ package com.shelter.service;
 import com.shelter.model.Albergue;
 import com.shelter.model.Damnificado;
 import com.shelter.model.DamnificadoVulnerable;
+import com.shelter.model.Recurso;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,7 @@ public class AlbergueService {
 
             if (albergue.tieneCupo()) {
                 albergue.setOcupacionActual(albergue.getOcupacionActual() + 1);
+                albergue.getDamnificados().add(damnificado); 
                 System.out.println("- " + damnificado.getNombreCompleto() + " (Prioridad " + prioridad
                         + ") ingresó a " + albergue.getNombre());
                 System.out.println("  " + damnificado.determinarNivelPrioridad());
@@ -48,7 +50,7 @@ public class AlbergueService {
                 return false;
             }
         }
-        System.out.println("❌ Albergue no encontrado.");
+        System.out.println(" Albergue no encontrado.");
         return false;
     }
 
@@ -74,11 +76,11 @@ public class AlbergueService {
 
             if (origen.isPresent() && destino.isPresent()) {
                 destino.get().setOcupacionActual(destino.get().getOcupacionActual() + 1);
-                System.out.println("🔄 " + damnificado.getNombreCompleto() + " derivado con éxito a " + destino.get().getNombre());
+                System.out.println( damnificado.getNombreCompleto() + " derivado con éxito a " + destino.get().getNombre());
                 return true;
             }
         }
-        System.out.println("❌ No fue posible realizar la derivación.");
+        System.out.println(" No fue posible realizar la derivación.");
         return false;
     }
 
@@ -92,5 +94,23 @@ public class AlbergueService {
 
     public Optional<Albergue> buscarPorId(String id) {
         return albergues.stream().filter(a -> a.getId().equalsIgnoreCase(id)).findFirst();
+    }
+
+    // RF-03: Registrar recurso
+    public boolean registrarRecurso(String idAlbergue, Recurso recurso) {
+        Optional<Albergue> optAlbergue = buscarPorId(idAlbergue);
+        
+        if (optAlbergue.isPresent()) {
+            Albergue albergue = optAlbergue.get();
+            
+            // Llamamos al método del parche que inserta en la lista
+            albergue.registrarRecurso(recurso); 
+            
+            System.out.println("Recurso '" + recurso.getNombre() + "' (" + recurso.getCantidadDisponible() + " " + recurso.getUnidad() + ") registrado en el albergue " + albergue.getNombre());
+            return true;
+        }
+        
+        System.out.println(" Albergue no encontrado. No se pudo registrar el recurso.");
+        return false;
     }
 }
