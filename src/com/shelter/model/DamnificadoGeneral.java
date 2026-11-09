@@ -2,7 +2,7 @@ package com.shelter.model;
 
 public class DamnificadoGeneral extends Damnificado{
     
-    public DamnificadoGeneral(String dni, String nombreCompleto, int edad) {
+    public DamnificadoGeneral(String dni, String nombreCompleto, int edad, boolean atencionMedica) {
         super(dni, nombreCompleto, edad);
     }
     

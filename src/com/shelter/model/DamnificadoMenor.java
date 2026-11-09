@@ -5,7 +5,7 @@ public class DamnificadoMenor extends Damnificado {
     private String nombreTutor;
     private String parentesco;
     
-    public DamnificadoMenor(String dni, String nombreCompleto, int edad, String dniTutor, String nombreTutor, String parentesco ) {
+    public DamnificadoMenor(String dni, String nombreCompleto, int edad, boolean atencionMedica, String dniTutor) {
         super(dni, nombreCompleto, edad);
         this.dniTutor = dniTutor;
         this.nombreTutor = nombreTutor;

@@ -3,6 +3,7 @@ package com.shelter;
 import com.shelter.model.Albergue;
 import com.shelter.model.Damnificado;
 import com.shelter.model.DamnificadoGeneral;
+import com.shelter.model.DamnificadoMenor;
 import com.shelter.model.DamnificadoVulnerable;
 import com.shelter.model.Recurso;
 import com.shelter.model.RegistroAsignacion;
@@ -113,40 +114,66 @@ public class Main{
             
             int op = leerEntero("Seleccione una opcion: ");
             switch (op) {
-                case 1 -> { 
-                        System.out.println("\n--- REGISTRAR DAMNIFICADO ---");
-                        String dni = leerTexto("Ingrese DNI/ID: ");
-                        
-                        String nombre = leerTexto("Ingrese Nombre Completo: "); 
-                        
-                        int edad = leerEntero("Ingrese Edad: "); 
-                        
-                        System.out.print("¿Requiere atención medica inmediata? (true/false): ");
-                        boolean requiereAtencion = scanner.nextBoolean();
+                case 1 -> {
+                    System.out.println("\n--- REGISTRO DE NUEVO DAMNIFICADO ---");
+                    System.out.print("Ingrese DNI: ");
+                    String dni = scanner.nextLine();
+
+                    System.out.print("Ingrese Nombre Completo: ");
+                    String nombre = scanner.nextLine();
+
+                    System.out.print("Ingrese Edad: ");
+                    int edad = scanner.nextInt();
+
+                    System.out.print("¿Requiere atención médica inmediata? (true/false): ");
+                    boolean atencionMedica = scanner.nextBoolean();
+                    scanner.nextLine(); // Limpiar búfer de consola
+
+                    System.out.println("\nSeleccione el tipo de perfil:");
+                    System.out.println("1. General");
+                    System.out.println("2. Menor de edad");
+                    System.out.println("3. Vulnerable (Gestante, Discapacidad, Adulto Mayor, etc.)");
+                    System.out.print("Opción: ");
+                    int tipoPerfil = scanner.nextInt();
+                    scanner.nextLine(); // Limpiar búfer
+
+                    Damnificado nuevoDamnificado = null;
+
+                    if (tipoPerfil == 3) {
+                        System.out.println("\n--- DETALLES DE VULNERABILIDAD ---");
+                        System.out.print("Describa la condición especial (ej. Gestante, Discapacitado, Adulto Mayor): ");
+                        String condicion = scanner.nextLine();
+
+                        System.out.print("¿Se encuentra en estado de gestación? (true/false): ");
+                        boolean esGestante = scanner.nextBoolean();
+
+                        System.out.print("¿Padece alguna enfermedad crónica o crítica? (true/false): ");
+                        boolean esCronica = scanner.nextBoolean();
                         scanner.nextLine(); // Limpiar búfer
-                    
-                        String idAlbergue = leerTexto("Ingrese el ID del albergue destino (ej: A1, A2): "); 
-                        
-                        // Crear el tipo de damnificado según los datos ingresados
-                        Damnificado nuevoDamnificado;
-                        if (requiereAtencion) {
-                            nuevoDamnificado = new DamnificadoVulnerable(dni, nombre, edad, true, false, false);
-                        } else {
-                            nuevoDamnificado = new DamnificadoGeneral(dni, nombre, edad);
-                        }
-                        
-                        // Intentar ingreso
-                        boolean exito = albergueService.registrarIngreso(idAlbergue, nuevoDamnificado);
-                        
-                        // Si no hay cupo, ofrecer derivación
-                        if (!exito) {
-                            String respuesta = leerTexto("¿Desea intentar derivarlo a otro albergue disponible? (s/n): ");
-                            if (respuesta.equalsIgnoreCase("s")) {
-                                String idDestino = leerTexto("Ingrese ID del albergue de destino para derivacion: ");
-                                albergueService.derivarDamnificado(idAlbergue, idDestino, nuevoDamnificado);
-                            }
-                        }
+
+                        // Instancia la subclase con todas sus condiciones
+                        nuevoDamnificado = new DamnificadoVulnerable(dni, nombre, edad, atencionMedica, condicion, esGestante, esCronica);
+
+                    } else if (tipoPerfil == 2) {
+                        System.out.print("Ingrese nombre o DNI del apoderado: ");
+                        String apoderado = scanner.nextLine();
+                        nuevoDamnificado = new DamnificadoMenor(dni, nombre, edad, atencionMedica, apoderado);
+
+                    } else {
+                        nuevoDamnificado = new DamnificadoGeneral(dni, nombre, edad, atencionMedica);
                     }
+
+                    System.out.print("\nIngrese el ID del Albergue asignado (ej. A1): ");
+                    String idAlbergue = scanner.nextLine();
+
+                    // Invoca el registro en la capa de servicio
+                    boolean registrado = albergueService.registrarIngreso(idAlbergue, nuevoDamnificado);
+
+                    if (!registrado) {
+                        System.out.println("⚠️ No hay cupo disponible. Buscando alternativas en la red...");
+                        albergueService.consultarDisponibilidad();
+                    }
+                }
                 case 2 -> { /* Lógica derivar */ }
                 case 3 -> { /* Lógica salida */ }
                 case 0 -> volver = true;

@@ -4,7 +4,7 @@ public class DamnificadoVulnerable extends Damnificado{
     private boolean atencionMedica; 
     private boolean estadoGestacion; 
 
-    public DamnificadoVulnerable(String dni, String nombreCompleto, int edad, boolean atencionMedica, boolean estadoGestacion, boolean enfermedadCronica){
+    public DamnificadoVulnerable(String dni, String nombreCompleto, int edad, boolean atencionMedica, String condicion, boolean estadoGestacion, boolean enfermedadCronica){
         super(dni, nombreCompleto, edad); 
         this.atencionMedica = atencionMedica; 
         this.enfermedadCronica = enfermedadCronica;  
