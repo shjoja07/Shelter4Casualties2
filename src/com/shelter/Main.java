@@ -110,6 +110,7 @@ public class Main{
             System.out.println("1. Registrar ingreso de damnificado (RF-02)");
             System.out.println("2. Derivar damnificado a otro albergue (RF-08)");
             System.out.println("3. Registrar salida voluntaria (RF-08)");
+            System.out.println("4. Buscar Damnificado");
             System.out.println("0. Volver al Menu Principal");
             
             int op = leerEntero("Seleccione una opcion: ");
@@ -174,11 +175,57 @@ public class Main{
                         albergueService.consultarDisponibilidad();
                     }
                 }
-                case 2 -> { /* Lógica derivar */ }
-                case 3 -> { /* Lógica salida */ }
+                case 2 -> derivarDamnificado();
+                case 3 -> registrarSalidaVoluntaria();
+                case 4 -> buscarDamnificado();
                 case 0 -> volver = true;
                 default -> System.out.println("Opcion no valida.");
             }
+        }
+    }
+
+    private static void buscarDamnificado() {
+        System.out.println("\n--- BUSCAR DAMNIFICADO ---");
+        String idAlb = leerTexto("Ingrese el ID del albergue: ");
+        String dni = leerTexto("Ingrese el DNI/ID a consultar: ");
+
+        Damnificado d = albergueService.buscarDamnificadoEnAlbergue(idAlb, dni);
+        if (d != null) {
+            System.out.println("\nDamnificado Encontrado:");
+            System.out.println("DNI: " + d.getDni());
+            System.out.println("Nombre: " + d.getNombreCompleto());
+            System.out.println("Edad: " + d.getEdad());
+            boolean requiereAtencion = (d instanceof DamnificadoVulnerable vulnerable) && vulnerable.isAtencionMedica();
+            System.out.println("Requiere atención médica: " + (requiereAtencion ? "Sí" : "No"));
+        } else {
+            System.out.println("No se encontró ningún damnificado con el DNI " + dni + " en el albergue " + idAlb + ".");
+        }
+    }
+
+    private static void derivarDamnificado() {
+        System.out.println("\n--- DERIVAR DAMNIFICADO A OTRO ALBERGUE (RF-08) ---");
+        String idOrigen = leerTexto("Ingrese ID del albergue origen: ");
+        String idDestino = leerTexto("Ingrese ID del albergue destino: ");
+        String dni = leerTexto("Ingrese el DNI/ID del damnificado a derivar: ");
+
+        boolean exito = albergueService.derivarDamnificado(idOrigen, idDestino, dni);
+        if (exito) {
+            System.out.println("Derivación realizada con éxito.");
+        } else {
+            System.out.println("No se pudo completar la derivación. Verifique los datos ingresados.");
+        }
+    }
+
+    private static void registrarSalidaVoluntaria() {
+        System.out.println("\n--- REGISTRAR SALIDA VOLUNTARIA (RF-08) ---");
+        String idAlb = leerTexto("Ingrese el ID del albergue: ");
+        String dni = leerTexto("Ingrese el DNI/ID del damnificado: ");
+
+        boolean exito = albergueService.registrarSalida(idAlb, dni);
+        if (exito) {
+            System.out.println("Salida voluntaria registrada correctamente.");
+        } else {
+            System.out.println("No se pudo registrar la salida. Verifique el albergue o el DNI.");
         }
     }
 

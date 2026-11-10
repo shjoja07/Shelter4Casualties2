@@ -4,7 +4,6 @@ import com.shelter.model.Albergue;
 import com.shelter.model.Damnificado;
 import com.shelter.model.DamnificadoVulnerable;
 import com.shelter.model.Recurso;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -39,11 +38,9 @@ public class AlbergueService {
             int prioridad = calcularPrioridadAsignacion(damnificado);
 
             if (albergue.tieneCupo()) {
-                albergue.setOcupacionActual(albergue.getOcupacionActual() + 1);
-                albergue.getDamnificados().add(damnificado); 
-                System.out.println("- " + damnificado.getNombreCompleto() + " (Prioridad " + prioridad
-                        + ") ingresó a " + albergue.getNombre());
-                System.out.println("  " + damnificado.determinarNivelPrioridad());
+                albergue.alojarDamnificado(damnificado);
+                System.out.println("Damnificado " + damnificado.getNombreCompleto() + " (Prioridad " + prioridad 
+                    + ") alojado en " + albergue.getNombre());
                 return true;
             } else {
                 System.out.println("Albergue lleno. Invocando opción de derivación o filtrado...");
@@ -111,6 +108,66 @@ public class AlbergueService {
         }
         
         System.out.println(" Albergue no encontrado. No se pudo registrar el recurso.");
+        return false;
+    }
+    /**
+     * Retira un damnificado de un albergue específico por su DNI.
+     */
+    public boolean retirarDamnificadoDeAlbergue(String idAlbergue, String dni) {
+        Optional<Albergue> optAlb = buscarPorId(idAlbergue);
+        if (optAlb.isPresent()) {
+            return optAlb.get().retirarDamnificado(dni);
+        }
+        return false;
+    }
+
+    /**
+     * Busca un damnificado en un albergue específico por su DNI.
+     */
+    public Damnificado buscarDamnificadoEnAlbergue(String idAlbergue, String dni) {
+        Optional<Albergue> optAlb = buscarPorId(idAlbergue);
+        if (optAlb.isPresent()) {
+            return optAlb.get().buscarDamnificado(dni);
+        }
+        return null;
+    }
+    /**
+     * RF-08: Registrar salida voluntaria de un damnificado.
+     * Retira al damnificado del albergue usando el método del modelo.
+     */
+    public boolean registrarSalida(String idAlbergue, String dni) {
+        Optional<Albergue> optAlb = buscarPorId(idAlbergue);
+        if (optAlb.isPresent()) {
+            return optAlb.get().retirarDamnificado(dni);
+        }
+        return false;
+    }
+
+    /**
+     * RF-08: Derivar un damnificado de un albergue de origen a uno de destino.
+     * Busca al damnificado, lo retira del albergue origen y lo aloja en el de destino.
+     */
+    public boolean derivarDamnificado(String idOrigen, String idDestino, String dni) {
+        Optional<Albergue> optOrigen = buscarPorId(idOrigen);
+        Optional<Albergue> optDestino = buscarPorId(idDestino);
+
+        if (optOrigen.isPresent() && optDestino.isPresent()) {
+            Albergue origen = optOrigen.get();
+            Albergue destino = optDestino.get();
+
+            Damnificado d = origen.buscarDamnificado(dni);
+            if (d != null) {
+                if (destino.tieneCupo()) {
+                    origen.retirarDamnificado(dni);
+                    destino.alojarDamnificado(d);
+                    return true;
+                } else {
+                    System.out.println("El albergue de destino no tiene capacidad disponible.");
+                }
+            } else {
+                System.out.println("El damnificado no se encuentra en el albergue de origen.");
+            }
+        }
         return false;
     }
 }
