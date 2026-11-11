@@ -1,15 +1,27 @@
 # Diagrama de clases UML
 
+Actualizado al código real tras la revisión previa a Swing. Cambios respecto a la versión anterior:
+nombres corregidos (`DamnificadoMenor`), clases nuevas (`NivelPrioridad`, `NivelSemaforo`, `Alerta`,
+`FiltroAlbergue`, paquete `persistence`), flecha `AsignacionRecurso → AlbergueService` en el sentido correcto
+y notas al día.
+
 ```mermaid
 classDiagram
     direction TB
 
     class Main {
         +main(args: String[])
-        -leerTexto()
-        -leerEntero()
-        -leerDecimal()
-        -leerSiNo()
+        -iniciarDatos()
+        -menuAlbergues()
+        -menuDamnificados()
+        -menuRecursos()
+        -menuPersistencia()
+        -leerTexto(String): String
+        -leerEntero(String): int
+        -leerDecimal(String): double
+        -leerSiNo(String): boolean
+        -leerDni(String): String
+        -leerFechaOpcional(String): LocalDate
     }
 
     class SphereConstantes {
@@ -20,27 +32,70 @@ classDiagram
         -albergues: List~Albergue~
         +UMBRAL_AMARILLO: double
         +UMBRAL_ROJO: double
+        +MARGEN_ADVERTENCIA: double
+        +UNIDAD_AGUA: String
         +registrarAlbergue(Albergue): boolean
-        +registrarIngreso(String, Damnificado): boolean
-        +registrarRecurso(String, Recurso): boolean
-        +mostrarPanelSemaforo(): void
-        +actualizarSemaforo(Albergue): void
-        +validarMinimosSphere(Albergue): List~String~
-        +filtrarAlbergues(...): List~Albergue~
-        +derivarDamnificado(String, String, Damnificado): boolean
+        +registrarIngreso(String, Damnificado): ResultadoIngreso
+        +derivarDamnificado(String, String, String): ResultadoDerivacion
         +registrarSalida(String, String): boolean
+        +registrarRecurso(String, Recurso): boolean
+        +actualizarRecurso(String, Recurso, double, LocalDate): boolean
+        +obtenerPanelSemaforo(): List~Albergue~
+        +calcularSemaforo(Albergue): NivelSemaforo
+        +actualizarSemaforo(Albergue): void
+        +actualizarTodosLosSemaforos(): void
+        +validarMinimosSphere(Albergue): List~Alerta~
+        +evaluarRecursos(Albergue): List~Alerta~
+        +obtenerAlertas(Albergue): List~Alerta~
+        +capacidadSegunEspacio(Albergue): int
+        +filtrarAlbergues(FiltroAlbergue): List~Albergue~
         +consultarDisponibilidad(): List~Albergue~
-        +consultarAlbergue(String): void
+        +consultarAlbergue(String): Optional~Albergue~
+        +ubicarDamnificado(String): Optional~Albergue~
         +calcularPrioridadAsignacion(Damnificado): int
         +buscarPorId(String): Optional~Albergue~
+        +getAlbergues(): List~Albergue~
+        +reemplazarAlbergues(List~Albergue~): void
+    }
+
+    class ResultadoIngreso {
+        <<enumeration>>
+        INGRESADO
+        ALBERGUE_NO_ENCONTRADO
+        SIN_CUPO
+        DNI_DUPLICADO
+    }
+
+    class ResultadoDerivacion {
+        <<enumeration>>
+        DERIVADO
+        ORIGEN_NO_ENCONTRADO
+        DESTINO_NO_ENCONTRADO
+        MISMO_ALBERGUE
+        DAMNIFICADO_NO_ENCONTRADO
+        DESTINO_SIN_CUPO
+    }
+
+    class FiltroAlbergue {
+        <<record>>
+        +cuposMinimos: Integer
+        +distrito: String
+        +nivelAlerta: NivelSemaforo
+        +recursoFaltante: TipoRecurso
+        +sinFiltros(): FiltroAlbergue
+        +cumple(Albergue): boolean
     }
 
     class AsignacionRecurso {
         -albergueService: AlbergueService
         -historial: List~RegistroAsignacion~
         +calcularOrdenPrioridad(Albergue): List~Damnificado~
+        +calcularOrdenPrioridad(Albergue, Recurso): List~Damnificado~
+        +cantidadSugeridaPorPersona(Recurso): double
         +asignar(Albergue, Recurso, double): List~RegistroAsignacion~
+        +asignar(Albergue, Recurso, double, double): List~RegistroAsignacion~
         +getHistorial(): List~RegistroAsignacion~
+        +reemplazarHistorial(List~RegistroAsignacion~): void
     }
 
     class RegistroAsignacion {
@@ -58,12 +113,12 @@ classDiagram
         -id: String
         -nombre: String
         -distrito: String
-        -tipoInfrastructura: String
+        -tipoInfraestructura: String
         -capacidadMaxima: int
         -areaM2: double
         -damnificados: List~Damnificado~
         -recursos: List~Recurso~
-        -estadoSemaforo: String
+        -estadoSemaforo: NivelSemaforo
         +tieneCupo(): boolean
         +getCuposDisponibles(): int
         +getOcupacionActual(): int
@@ -71,7 +126,7 @@ classDiagram
         +alojar(Damnificado): boolean
         +retirar(Damnificado): boolean
         +buscarDamnificado(String): Optional~Damnificado~
-        +registrarRecurso(Recurso): void
+        +registrarRecurso(Recurso): Recurso
         +getCantidadTotal(TipoRecurso): double
         +tieneRecursoDisponible(TipoRecurso): boolean
     }
@@ -108,15 +163,42 @@ classDiagram
         +esCritico(): boolean
     }
 
+    class NivelPrioridad {
+        <<enumeration>>
+        CRITICA
+        ALTA
+        MEDIA
+        BAJA
+        +getOrden(): int
+        +masUrgente(NivelPrioridad, NivelPrioridad): NivelPrioridad
+    }
+
+    class NivelSemaforo {
+        <<enumeration>>
+        VERDE
+        AMARILLO
+        ROJO
+        +peor(NivelSemaforo, NivelSemaforo): NivelSemaforo
+    }
+
+    class Alerta {
+        <<record>>
+        +gravedad: NivelSemaforo
+        +codigo: String
+        +mensaje: String
+    }
+
     class Damnificado {
         <<abstract>>
         #dni: String
         #nombreCompleto: String
         #edad: int
         #categoria: CategoriaEdad
-        #ultimaAsignacion: LocalDateTime
-        +asignarCategoriaPorEdad(int)
+        #atencionMedica: boolean
+        +getNivelPrioridad(): NivelPrioridad
         +determinarNivelPrioridad(): String
+        +necesitaMedicina(): boolean
+        +esDniValido(String): boolean
     }
 
     class CategoriaEdad {
@@ -128,62 +210,99 @@ classDiagram
     }
 
     class DamnificadoGeneral {
-        +determinarNivelPrioridad()
+        +getNivelPrioridad(): NivelPrioridad
+        +determinarNivelPrioridad(): String
     }
 
-    class DamnificadoMener {
+    class DamnificadoMenor {
         -dniTutor: String
         -nombreTutor: String
         -parentesco: String
-        +determinarNivelPrioridad()
+        +tieneTutor(): boolean
+        +getNivelPrioridad(): NivelPrioridad
+        +determinarNivelPrioridad(): String
     }
 
     class DamnificadoVulnerable {
         -enfermedadCronica: boolean
-        -atencionMedica: boolean
         -estadoGestacion: boolean
-        +confirmacionAtencion(boolean)
-        +estadoPostAtencion(boolean)
-        +determinarNivelPrioridad()
+        -condicion: String
+        -atendido: boolean
+        -estable: boolean
+        +confirmacionAtencion(boolean): String
+        +estadoPostAtencion(boolean): String
+        +getNivelPrioridad(): NivelPrioridad
+        +determinarNivelPrioridad(): String
     }
 
-    %% Relaciones originales
+    class PersistenciaJson {
+        <<utility>>
+        +VERSION: int
+        +guardar(Path, List~Albergue~, List~RegistroAsignacion~): void
+        +cargar(Path): Datos
+    }
+
+    class Datos {
+        <<record>>
+        +albergues: List~Albergue~
+        +historial: List~RegistroAsignacion~
+    }
+
+    class Json {
+        <<utility>>
+        +escribir(Object): String
+        +leer(String): Object
+    }
+
+    %% Relaciones
 
     Main ..> AsignacionRecurso : usa
     Main ..> AlbergueService : usa
+    Main ..> PersistenciaJson : guarda y carga
 
     SphereConstantes <.. AlbergueService : valores minimos
+    SphereConstantes <.. AsignacionRecurso : agua por persona
 
     AlbergueService "1" *-- "0..*" Albergue : gestiona
-    AlbergueService ..> AsignacionRecurso : consulta prioridad
+    AlbergueService ..> ResultadoIngreso : devuelve
+    AlbergueService ..> ResultadoDerivacion : devuelve
+    AlbergueService ..> FiltroAlbergue : recibe
+    AlbergueService ..> Alerta : crea
 
+    AsignacionRecurso --> AlbergueService : consulta prioridad y actualiza semaforo
     AsignacionRecurso ..> RegistroAsignacion : crea
 
     Albergue "1" *-- "0..*" Recurso : inventario
     Albergue "1" o-- "0..*" Damnificado : aloja
+    Albergue --> NivelSemaforo
 
     Recurso ..|> Distribuible
     Recurso --> TipoRecurso
 
     Damnificado <|-- DamnificadoGeneral
-    Damnificado <|-- DamnificadoMener
+    Damnificado <|-- DamnificadoMenor
     Damnificado <|-- DamnificadoVulnerable
 
     Damnificado --> CategoriaEdad
+    Damnificado ..> NivelPrioridad : decide
+
+    PersistenciaJson ..> Json : usa
+    PersistenciaJson ..> Datos : devuelve
+    PersistenciaJson ..> Albergue : convierte
 
     %% Informacion complementaria del modelo
 
-    note for Main "El menu contiene las opciones 1 a 11. Los metodos de lectura son privados."
+    note for Main "Menu principal: 1 Albergues, 2 Damnificados, 3 Recursos y Sphere, 4 Persistencia, 0 Salir. Solo presentacion: la logica vive en los servicios."
 
-    note for SphereConstantes "Contiene 19 constantes static final correspondientes a los minimos Sphere 2018. Los nombres y valores individuales no fueron proporcionados."
+    note for SphereConstantes "19 constantes static final de los minimos Sphere 2018. El sistema evalua hoy agua (L/persona/dia) y espacio vital (m2/persona); las demas quedan como referencia."
 
-    note for TipoRecurso "AGUA, ALIMENTO y MEDICINA son recursos criticos."
+    note for AlbergueService "No imprime nada: devuelve resultados. RF-01 registrarAlbergue. RF-02 registrarIngreso. RF-03 registrarRecurso y actualizarRecurso. RF-05 obtenerPanelSemaforo. RF-06 validarMinimosSphere. RF-07 filtrarAlbergues. RF-08 derivarDamnificado y registrarSalida. RF-09 consultarDisponibilidad y consultarAlbergue."
 
-    note for Recurso "Incluye constructor y getters. Un recurso sin fecha de vencimiento (null) nunca esta vencido."
+    note for AsignacionRecurso "RF-04. Orden: nivel de prioridad y luego quien lleva mas tiempo sin recibir ese recurso (se lee del historial). La medicina solo va a quien la necesita."
 
-    note for Damnificado "Incluye getters y setters."
+    note for Albergue "La ocupacion se deriva de la lista de damnificados. Las listas expuestas son de solo lectura. El semaforo lo calcula AlbergueService."
 
-    note for AlbergueService "RF-01: registrarAlbergue. RF-02: registrarIngreso. RF-03: registrarRecurso. RF-05: mostrarPanelSemaforo. RF-06: validarMinimosSphere. RF-07: filtrarAlbergues. RF-08: derivarDamnificado y registrarSalida. RF-09: consultarDisponibilidad y consultarAlbergue."
+    note for Damnificado "La prioridad se decide por polimorfismo (getNivelPrioridad). Menor sin tutor sube a ALTA. Vulnerable nunca es BAJA."
 
-    note for AsignacionRecurso "RF-04: asignar recursos."
+    note for PersistenciaJson "Formato version 1. Los campos nuevos son opcionales al cargar, por lo que los archivos antiguos siguen funcionando."
 ```

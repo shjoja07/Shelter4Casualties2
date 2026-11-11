@@ -15,15 +15,22 @@ public class RegistroAsignacion {
     private double cantidad;
     private LocalDateTime fechaHora;
 
+    // Entrega nueva: la fecha y hora son las del momento
     public RegistroAsignacion(String idAlbergue, String dni, String nombreDamnificado,
                               String recurso, String unidad, double cantidad) {
+        this(idAlbergue, dni, nombreDamnificado, recurso, unidad, cantidad, LocalDateTime.now());
+    }
+
+    // Entrega con fecha y hora conocidas (se usa al cargar el historial desde JSON)
+    public RegistroAsignacion(String idAlbergue, String dni, String nombreDamnificado,
+                              String recurso, String unidad, double cantidad, LocalDateTime fechaHora) {
         this.idAlbergue = idAlbergue;
         this.dni = dni;
         this.nombreDamnificado = nombreDamnificado;
         this.recurso = recurso;
         this.unidad = unidad;
         this.cantidad = cantidad;
-        this.fechaHora = LocalDateTime.now();
+        this.fechaHora = fechaHora;
     }
 
     // Getters
