@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "albergues": [
+    {
+      "id": "A1",
+      "nombre": "Refugio Central",
+      "distrito": "Lima Centro",
+      "tipoInfraestructura": "Coliseo",
+      "areaM2": 14.0,
+      "capacidadMaxima": 2,
+      "ocupacionActual": 1,
+      "estadoSemaforo": "ROJO",
+      "damnificados": [
+        {
+          "tipo": "GENERAL",
+          "dni": "70638676",
+          "nombreCompleto": "david adrian",
+          "edad": 20,
+          "atencionMedica": false
+        }
+      ],
+      "recursos": []
+    },
+    {
+      "id": "A2",
+      "nombre": "Refugio Norte",
+      "distrito": "Los Olivos",
+      "tipoInfraestructura": "Colegio",
+      "areaM2": 40.0,
+      "capacidadMaxima": 5,
+      "ocupacionActual": 0,
+      "estadoSemaforo": "VERDE",
+      "damnificados": [],
+      "recursos": []
+    },
+    {
+      "id": "A3A",
+      "nombre": "David",
+      "distrito": "San Miguel",
+      "tipoInfraestructura": "Coliseo",
+      "areaM2": 200.0,
+      "capacidadMaxima": 50,
+      "ocupacionActual": 0,
+      "estadoSemaforo": "VERDE",
+      "damnificados": [],
+      "recursos": [
+        {
+          "tipo": "MEDICINA",
+          "nombre": "Paracetamol",
+          "unidad": "unidades",
+          "cantidadDisponible": 100.0,
+          "fechaVencimiento": null
+        },
+        {
+          "tipo": "ALIMENTO",
+          "nombre": "Cola Kola",
+          "unidad": "litros",
+          "cantidadDisponible": 50.0,
+          "fechaVencimiento": null
+        }
+      ]
+    }
+  ],
+  "historial": []
+}
