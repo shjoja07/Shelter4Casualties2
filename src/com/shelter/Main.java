@@ -50,7 +50,11 @@ public class Main{
     private static final AsignacionRecurso asignacionService = new AsignacionRecurso(albergueService);
 
     public static void main(String[] args) {
-
+        
+        if (args.length == 0) {
+        com.shelter.ui.VentanaPrincipal.main(args);
+        return;
+}
         iniciarDatos();
 
         boolean salir = false;
