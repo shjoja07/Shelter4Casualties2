@@ -10,16 +10,13 @@ import java.util.Optional;
 /**
  * Albergue temporal de la red.
  *
- * PASO 3 (encapsulación). Cambios respecto a la versión anterior:
- *  - La ocupación YA NO es un contador aparte: getOcupacionActual() es el tamaño de la lista de
- *    damnificados. Así es imposible que ocupación y personas alojadas se desincronicen.
- *    Por eso se eliminó setOcupacionActual().
+ *  - La ocupación ya no es un contador aparte, getOcupacionActual() es el tamaño de la lista de
+ *    damnificados. Ahora es imposible que ocupación y personas alojadas se desincronicen, y se eliminó setOcupacionActual().
  *  - getDamnificados() / getRecursos() devuelven listas de SOLO LECTURA. Para cambiar el albergue
- *    se usan los métodos alojar(), retirar() y registrarRecurso() (los del diagrama de clases).
- *  - Se agregan tipoInfraestructura y areaM2 (RF-01 y RF-06 los necesitan).
- *  - El estado semáforo es un enum calculado por AlbergueService (ya no es un String fijo).
+ *    se usan los métodos alojar(), retirar() y registrarRecurso().
+ *  - Se agregan tipoInfraestructura y areaM2.
+ *  - El estado semáforo es un enum calculado por AlbergueService (ya no es solo un String).
  *  - Se validan los datos del constructor (id/nombre no vacíos, capacidad > 0, área >= 0).
- *  - Se limpiaron los comentarios de trabajo ("Atte: Adrian", "Lo mismo") y la doble inicialización.
  */
 public class Albergue {
 

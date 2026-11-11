@@ -3,10 +3,8 @@ package com.shelter.model;
 /**
  * Nivel de prioridad de un damnificado para recibir recursos y atención.
  *
- * PASO 2 (prioridad unificada): antes existían dos sistemas que se contradecían
- * (un número 1/2 en AlbergueService y un texto "CRÍTICA/ALTA/MEDIA/BAJA" en cada subclase).
- * Ahora hay UNA sola fuente de verdad: cada subclase de Damnificado decide su nivel
- * (polimorfismo) y todo lo demás (servicio, reparto, interfaz) solo lo consulta.
+ * Cada subclase de Damnificado decide su nivel (polimorfismo)
+ * y todo lo demás (servicio, reparto, interfaz) solo lo consulta.
  *
  * El "orden" va de 1 (más urgente) a 4 (menos urgente); sirve para ordenar listas.
  */

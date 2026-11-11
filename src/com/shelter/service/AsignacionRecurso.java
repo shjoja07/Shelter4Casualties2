@@ -19,18 +19,13 @@ import java.util.Map;
 /**
  * Reparto de recursos escasos entre los damnificados de un albergue (RF-04).
  *
- * PASOS 1 y 2 - correcciones principales:
- *  - BUG CRÍTICO: antes se entregaba siempre 1.0 unidad aunque el stock fuera menor (ej. 0.5),
- *    y Recurso.descontar() lanzaba IllegalArgumentException que tumbaba el programa. Ahora cada
- *    entrega es min(cantidad por persona, cantidad restante, stock): nunca falla ni deja stock negativo.
- *  - RF-04 pide considerar "el tiempo transcurrido desde la última asignación": el orden es
- *    (1) nivel de prioridad, (2) quien lleva MÁS tiempo sin recibir ese recurso (o nunca recibió).
- *    Esa fecha se obtiene del historial, que ya se guarda en JSON (no hace falta un campo nuevo).
- *  - La MEDICINA solo se reparte a quien la necesita (antes se daba a todos por igual).
+ * Cada entrega es min(cantidad por persona, cantidad restante, stock), asi que no falla ni deja stock negativo.
+ *  - El orden es (1) nivel de prioridad, (2) quien lleva más tiempo sin recibir ese recurso.
+ *    Las fechas se obtienen del historial guardado en JSON.
+ *  - La MEDICINA solo se reparte a quien la necesita.
  *  - Para el AGUA la cantidad sugerida por persona es el mínimo Sphere (15 L/persona/día).
- *  - Se valida que el recurso pertenezca al albergue, no esté vencido y que las cantidades sean válidas
- *    (la revisión de vencimiento antes solo existía en Main).
- *  - No imprime nada: devuelve los registros de entrega.
+ *  - Se valida que el recurso pertenezca al albergue, no esté vencido y que las cantidades sean válidas.
+ *  - No imprime nada, solo se devuelven los registros de entrega.
  */
 public class AsignacionRecurso {
 

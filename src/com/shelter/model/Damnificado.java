@@ -3,13 +3,12 @@ package com.shelter.model;
 /**
  * Clase padre de todo damnificado. Cada subclase define su propia prioridad.
  *
- * Cambios respecto a la versión anterior (PASOS 1 y 2):
- *  - dni y nombreCompleto son FINAL: la identificación no se debe cambiar (así lo dice el avance 2).
- *  - La atención médica ahora vive AQUÍ y no solo en DamnificadoVulnerable: cualquier persona
- *    (general, menor o vulnerable) puede necesitarla. Antes se pedía por consola y se perdía.
+ *  - dni y nombreCompleto son FINAL: la identificación no se debe cambiar.
+ *  - La atención médica vive aquí, no en los hijos: cualquier persona
+ *    (general, menor o vulnerable) puede necesitarla.
  *  - Se agrega getNivelPrioridad() abstracto: la prioridad se decide por polimorfismo, de modo que
- *    añadir un nuevo subtipo NO obliga a modificar AlbergueService (cumple RNF-03, abierto/cerrado).
- *  - Los "números mágicos" de edad pasan a constantes con nombre.
+ *    añadir un nuevo subtipo NO obliga a modificar AlbergueService.
+ *  - Los números de edad pasan a constantes con nombre.
  *  - Se validan los datos en el constructor (DNI/nombre no vacíos, edad entre 0 y 120).
  */
 public abstract class Damnificado {

@@ -3,12 +3,9 @@ package com.shelter.model;
 /**
  * Damnificado vulnerable (gestante, enfermedad crónica, discapacidad, etc.).
  *
- * CAMBIOS (PASOS 1, 2 y 6):
- *  - atencionMedica pasó a la clase padre (se hereda isAtencionMedica / setAtencionMedica).
- *  - La prioridad es NUNCA baja (regla del avance 2): CRÍTICA con atención médica, ALTA si está
+ *  - atencionMedica pertenece a la clase padre (se hereda isAtencionMedica / setAtencionMedica).
+ *  - Prioridades: CRÍTICA con atención médica, ALTA si está
  *    gestante, MEDIA en el resto; y si por edad le corresponde algo más urgente, gana la edad.
- *    Antes una gestante o un crónico sin "atención médica" quedaba en prioridad normal al repartir
- *    recursos, aunque su texto dijera "ALTA": ahora texto y cálculo son la misma regla.
  *  - El parámetro "condicion" ya no se descarta: se guarda (texto libre: "Discapacitado", etc.).
  *  - confirmacionAtencion y estadoPostAtencion ya no imprimen por consola (el modelo no debe
  *    imprimir: la interfaz decide cómo mostrar). Ahora GUARDAN el estado y devuelven el texto.

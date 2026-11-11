@@ -26,11 +26,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Pruebas de la lógica de negocio (PASO 7). No usan JUnit a propósito: así corren en cualquier
- * equipo con Java 17 sin descargar librerías (RNF-04). Cada prueba es una lambda; si lanza una
- * excepción o una verificación falla, se cuenta como fallo.
+ * Pruebas de la lógica de negocio. Corren en cualquier
+ * equipo con Java 17 sin descargar librerías. Además, cada prueba es una lambda; en caso salga
+ * una excepción o una verificación falla, se cuenta como fallo.
  *
- * Ejecutar:  java -cp out com.shelter.PruebasShelter   (el programa termina con código 1 si algo falla)
+ * Ejecución:  java -cp out com.shelter.PruebasShelter   (el programa termina con código 1 si algo falla)
  */
 public class PruebasShelter {
 

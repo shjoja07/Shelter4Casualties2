@@ -28,18 +28,14 @@ import java.util.Optional;
 import java.util.Scanner;
 
 /**
- * Interfaz de consola del sistema. Es SOLO presentación: toda la lógica vive en los servicios,
- * que devuelven resultados (no imprimen). Cuando llegue Swing, esta clase se reemplaza por
- * ventanas que llaman a los mismos métodos de AlbergueService y AsignacionRecurso.
+ * Interfaz de consola del sistema. SOLO presentación, ya que toda la lógica vive en los servicios,
+ * que devuelven resultados (sin println).
  *
- * Cambios principales (PASOS 1, 5 y 6):
  *  - Toda la lectura pasa por métodos auxiliares que validan y repiten la pregunta (antes
  *    nextInt()/nextBoolean() directos tumbaban el programa con una letra).
- *  - Se completaron los menús que estaban vacíos: filtrar (RF-07), derivar y salida (RF-08),
+ *  - Opciones de filtrar (RF-07), derivar y salida (RF-08),
  *    validar Sphere (RF-06), actualizar inventario (RF-03) y persistencia JSON.
- *  - Se pide primero el albergue, y los resultados distintos (no existe / sin cupo / DNI repetido)
- *    ya no se confunden entre sí.
- *  - Al iniciar se carga el archivo JSON si existe y al salir se guarda (antes solo lo decía).
+ *  - Al iniciar se carga el archivo JSON si existe; al salir, se guarda.
  */
 public class Main{
     /** Archivo donde se guarda y de donde se carga el estado del sistema. */

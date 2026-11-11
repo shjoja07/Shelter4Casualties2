@@ -1,10 +1,5 @@
 # Diagrama de clases UML
 
-Actualizado al código real tras la revisión previa a Swing. Cambios respecto a la versión anterior:
-nombres corregidos (`DamnificadoMenor`), clases nuevas (`NivelPrioridad`, `NivelSemaforo`, `Alerta`,
-`FiltroAlbergue`, paquete `persistence`), flecha `AsignacionRecurso → AlbergueService` en el sentido correcto
-y notas al día.
-
 ```mermaid
 classDiagram
     direction TB

@@ -4,8 +4,7 @@ package com.shelter.model;
  * Damnificado sin condición especial. Su prioridad es la regla base:
  * BAJA, salvo que requiera atención médica (CRÍTICA) o sea niño pequeño / adulto mayor (ALTA).
  *
- * CAMBIO: antes el parámetro atencionMedica se recibía y se descartaba (se perdía el dato);
- * ahora se guarda en la clase padre y sí influye en la prioridad.
+ * El parámetro atencionMedica se guarda en la clase padre e influye en la prioridad.
  */
 public class DamnificadoGeneral extends Damnificado {
 

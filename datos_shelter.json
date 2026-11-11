@@ -8,7 +8,7 @@
       "tipoInfraestructura": "Coliseo",
       "areaM2": 14.0,
       "capacidadMaxima": 2,
-      "ocupacionActual": 1,
+      "ocupacionActual": 2,
       "estadoSemaforo": "ROJO",
       "damnificados": [
         {
@@ -17,9 +17,29 @@
           "nombreCompleto": "david adrian",
           "edad": 20,
           "atencionMedica": false
+        },
+        {
+          "tipo": "VULNERABLE",
+          "dni": "70696952",
+          "nombreCompleto": "jojita",
+          "edad": 19,
+          "atencionMedica": true,
+          "estadoGestacion": true,
+          "enfermedadCronica": false,
+          "condicion": "Autismo",
+          "atendido": false,
+          "estable": false
         }
       ],
-      "recursos": []
+      "recursos": [
+        {
+          "tipo": "AGUA",
+          "nombre": "Agua potable",
+          "unidad": "litros",
+          "cantidadDisponible": 40.0,
+          "fechaVencimiento": null
+        }
+      ]
     },
     {
       "id": "A2",
@@ -28,9 +48,34 @@
       "tipoInfraestructura": "Colegio",
       "areaM2": 40.0,
       "capacidadMaxima": 5,
-      "ocupacionActual": 0,
-      "estadoSemaforo": "VERDE",
-      "damnificados": [],
+      "ocupacionActual": 2,
+      "estadoSemaforo": "ROJO",
+      "damnificados": [
+        {
+          "tipo": "VULNERABLE",
+          "dni": "76753543",
+          "nombreCompleto": "ggergrgr",
+          "edad": 19,
+          "atencionMedica": true,
+          "estadoGestacion": false,
+          "enfermedadCronica": true,
+          "condicion": "ferfef",
+          "atendido": false,
+          "estable": false
+        },
+        {
+          "tipo": "VULNERABLE",
+          "dni": "50505050",
+          "nombreCompleto": "eduardo",
+          "edad": 25,
+          "atencionMedica": true,
+          "estadoGestacion": true,
+          "enfermedadCronica": true,
+          "condicion": "",
+          "atendido": false,
+          "estable": false
+        }
+      ],
       "recursos": []
     },
     {
@@ -59,7 +104,64 @@
           "fechaVencimiento": null
         }
       ]
+    },
+    {
+      "id": "A5",
+      "nombre": "Joja",
+      "distrito": "Callao",
+      "tipoInfraestructura": "Coliseo",
+      "areaM2": 200.0,
+      "capacidadMaxima": 50,
+      "ocupacionActual": 0,
+      "estadoSemaforo": "VERDE",
+      "damnificados": [],
+      "recursos": [
+        {
+          "tipo": "AGUA",
+          "nombre": "Agua potable",
+          "unidad": "litros",
+          "cantidadDisponible": 100.0,
+          "fechaVencimiento": "2026-12-09"
+        }
+      ]
     }
   ],
-  "historial": []
+  "historial": [
+    {
+      "idAlbergue": "A1",
+      "dni": "70696952",
+      "nombreDamnificado": "jojita",
+      "recurso": "Agua potable",
+      "unidad": "litros",
+      "cantidad": 15.0,
+      "fechaHora": "2026-11-11T09:20:21.658734400"
+    },
+    {
+      "idAlbergue": "A1",
+      "dni": "70638676",
+      "nombreDamnificado": "david adrian",
+      "recurso": "Agua potable",
+      "unidad": "litros",
+      "cantidad": 15.0,
+      "fechaHora": "2026-11-11T09:20:21.658734400"
+    },
+    {
+      "idAlbergue": "A1",
+      "dni": "70696952",
+      "nombreDamnificado": "jojita",
+      "recurso": "Agua potable",
+      "unidad": "litros",
+      "cantidad": 15.0,
+      "fechaHora": "2026-11-11T10:23:29.700208100"
+    },
+    {
+      "idAlbergue": "A1",
+      "dni": "70638676",
+      "nombreDamnificado": "david adrian",
+      "recurso": "Agua potable",
+      "unidad": "litros",
+      "cantidad": 15.0,
+      "fechaHora": "2026-11-11T10:23:29.700208100"
+    }
+  ]
 }

@@ -20,13 +20,10 @@ import java.util.Set;
 /**
  * Controlador de la lógica de negocio de la red de albergues.
  *
- * PASO 6 (servicios sin println): esta clase YA NO IMPRIME NADA. Cada operación devuelve un
- * resultado (boolean, enum, lista u Optional) o lanza IllegalArgumentException si los datos son
- * inválidos. Quien decide cómo mostrarlo es la capa de presentación (hoy Main por consola,
- * mañana Swing). Esto es lo que permite reutilizar la lógica en la interfaz gráfica.
+ * Esta clase no imprime nada; las operaciones devuelven resultados (boolean, enum, lista u Optional)
+ * o lanza IllegalArgumentException si los datos son inválidos.
+ *  Se reutiliza la lógica en la interfaz gráfica.
  *
- * PASOS 1 y 4: se corrigen derivación y salida, se validan duplicados, y se implementan el
- * semáforo (RF-05), los mínimos Sphere (RF-06) y el filtrado (RF-07).
  */
 public class AlbergueService {
 
@@ -84,7 +81,7 @@ public class AlbergueService {
 
     /**
      * Prioridad de asignación (1 = más urgente ... 4 = menos urgente).
-     * Ya no usa "instanceof": delega en el damnificado (polimorfismo), así que agregar un
+     * No usa "instanceof": delega en el damnificado (polimorfismo), así que agregar un
      * subtipo nuevo no obliga a modificar este método (RNF-03).
      */
     public int calcularPrioridadAsignacion(Damnificado damnificado) {
@@ -124,8 +121,8 @@ public class AlbergueService {
 
     /**
      * RF-08: traslada a un damnificado (identificado por su DNI) de un albergue a otro.
-     * CORRECCIÓN: antes solo sumaba +1 en el destino. Ahora lo RETIRA del origen y lo ALOJA en
-     * el destino (ambas ocupaciones quedan correctas) y recalcula los dos semáforos.
+     * Se RETIRA del origen y lo ALOJA en
+     * el destino (ambas ocupaciones quedan correctas). Se recalculan los dos semáforos.
      */
     public ResultadoDerivacion derivarDamnificado(String idOrigen, String idDestino, String dni) {
         Optional<Albergue> origen = buscarPorId(idOrigen);

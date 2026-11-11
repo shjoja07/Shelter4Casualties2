@@ -8,9 +8,6 @@ import com.shelter.model.TipoRecurso;
  * Criterios para filtrar la tabla de albergues (RF-07). Cada criterio es opcional:
  * un valor null significa "no filtrar por este criterio". Los criterios se combinan con AND.
  *
- * La futura tabla filtrable de Swing solo tendrá que armar uno de estos objetos con los
- * controles de la pantalla y llamarlo con AlbergueService.filtrarAlbergues(filtro).
- *
  * @param cuposMinimos     cupos libres mínimos (ej. 1 = "solo albergues con cupo")
  * @param distrito         texto contenido en el distrito (sin distinguir mayúsculas)
  * @param nivelAlerta      nivel de semáforo exacto (VERDE, AMARILLO o ROJO)

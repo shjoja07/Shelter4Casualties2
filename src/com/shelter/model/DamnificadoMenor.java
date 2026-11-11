@@ -4,15 +4,11 @@ package com.shelter.model;
  * Damnificado menor de 18 años.
  *
  * CAMBIOS (PASOS 1 y 2):
- *  - Se corrige el constructor: antes hacía "this.nombreTutor = nombreTutor" y
- *    "this.parentesco = parentesco" sin que existieran como parámetros (se asignaban a sí mismos
- *    y quedaban null). Ahora hay un constructor completo con todos los datos del tutor.
- *  - El constructor original de 5 parámetros se conserva (solo DNI del tutor).
+ *  - Existe un constructor completo con todos los datos del tutor.
  *  - Se valida que sea menor de edad (< 18).
- *  - Prioridad: se mantiene BAJA como punto de partida (avance 2: el menor ACOMPAÑADO está
+ *  - Prioridad: se mantiene BAJA como punto de partida (el menor ACOMPAÑADO está
  *    protegido por su tutor), pero un menor NO ACOMPAÑADO (sin tutor) sube a ALTA, y las reglas
  *    comunes siguen aplicando (atención médica => CRÍTICA; niño de 5 años o menos => ALTA).
- *    Este punto es una DECISIÓN DE DOMINIO que el grupo debe confirmar (ver GUIA_DE_CAMBIOS.md).
  */
 public class DamnificadoMenor extends Damnificado {
     private String dniTutor;
