@@ -39,7 +39,7 @@ public class AlbergueService {
 
     /** Resultados posibles de registrar el ingreso de un damnificado (RF-02). */
     public enum ResultadoIngreso {
-        INGRESADO, ALBERGUE_NO_ENCONTRADO, SIN_CUPO, DNI_DUPLICADO
+        INGRESADO, ALBERGUE_NO_ENCONTRADO, SIN_CUPO, IDENTIDAD_DUPLICADA
     }
 
     /** Resultados posibles de derivar/reubicar a un damnificado (RF-08). */
@@ -92,14 +92,18 @@ public class AlbergueService {
     // DAMNIFICADOS (RF-02, RF-08)
     // =========================================================
 
-    /** Busca en toda la red el albergue donde está alojada una persona (por DNI). */
-    public Optional<Albergue> ubicarDamnificado(String dni) {
+    /** Busca en toda la red por código alfanumérico de refugio. */
+    public Optional<Albergue> ubicarDamnificadoPorId(String id) {
         for (Albergue a : albergues) {
-            if (a.buscarDamnificado(dni).isPresent()) {
+            if (a.buscarDamnificadoPorId(id).isPresent()) {
                 return Optional.of(a);
             }
         }
         return Optional.empty();
+    }
+
+    public Optional<Damnificado> buscarDamnificadoPorId(String id) {
+        return ubicarDamnificadoPorId(id).flatMap(a -> a.buscarDamnificadoPorId(id));
     }
 
     /** RF-02: registra el ingreso (la prioridad se calcula en el propio damnificado). */
@@ -108,8 +112,9 @@ public class AlbergueService {
         if (opt.isEmpty()) {
             return ResultadoIngreso.ALBERGUE_NO_ENCONTRADO;
         }
-        if (ubicarDamnificado(damnificado.getDni()).isPresent()) {
-            return ResultadoIngreso.DNI_DUPLICADO; // la misma persona no puede estar en dos lugares
+        if (ubicarPorDni(damnificado.getDni()).isPresent()
+                || ubicarPorNombre(damnificado.getNombreCompleto()).isPresent()) {
+            return ResultadoIngreso.IDENTIDAD_DUPLICADA;
         }
         Albergue albergue = opt.get();
         if (!albergue.alojar(damnificado)) {
@@ -119,33 +124,47 @@ public class AlbergueService {
         return ResultadoIngreso.INGRESADO;
     }
 
-    /**
-     * RF-08: traslada a un damnificado (identificado por su DNI) de un albergue a otro.
-     * Se RETIRA del origen y lo ALOJA en
-     * el destino (ambas ocupaciones quedan correctas). Se recalculan los dos semáforos.
-     */
-    public ResultadoDerivacion derivarDamnificado(String idOrigen, String idDestino, String dni) {
+    private Optional<Albergue> ubicarPorDni(String dni) {
+        for (Albergue a : albergues) {
+            if (a.buscarDamnificado(dni).isPresent()) {
+                return Optional.of(a);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** Consulta secundaria por DNI para verificación administrativa. */
+    public Optional<Albergue> ubicarDamnificadoPorDni(String dni) {
+        return ubicarPorDni(dni);
+    }
+
+    private Optional<Albergue> ubicarPorNombre(String nombre) {
+        String buscado = nombre == null ? "" : nombre.trim();
+        if (buscado.isEmpty()) {
+            return Optional.empty();
+        }
+        for (Albergue a : albergues) {
+            if (a.getDamnificados().stream()
+                    .anyMatch(d -> d.getNombreCompleto().equalsIgnoreCase(buscado))) {
+                return Optional.of(a);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** Derivación por ID, que es la operación recomendada por la aplicación. */
+    public ResultadoDerivacion derivarDamnificado(String idOrigen, String idDestino, String idDamnificado) {
         Optional<Albergue> origen = buscarPorId(idOrigen);
-        if (origen.isEmpty()) {
-            return ResultadoDerivacion.ORIGEN_NO_ENCONTRADO;
-        }
+        if (origen.isEmpty()) return ResultadoDerivacion.ORIGEN_NO_ENCONTRADO;
         Optional<Albergue> destino = buscarPorId(idDestino);
-        if (destino.isEmpty()) {
-            return ResultadoDerivacion.DESTINO_NO_ENCONTRADO;
-        }
-        if (origen.get() == destino.get()) {
-            return ResultadoDerivacion.MISMO_ALBERGUE;
-        }
-        Optional<Damnificado> persona = origen.get().buscarDamnificado(dni);
-        if (persona.isEmpty()) {
-            return ResultadoDerivacion.DAMNIFICADO_NO_ENCONTRADO;
-        }
-        if (!destino.get().tieneCupo()) {
-            return ResultadoDerivacion.DESTINO_SIN_CUPO;
-        }
+        if (destino.isEmpty()) return ResultadoDerivacion.DESTINO_NO_ENCONTRADO;
+        if (origen.get() == destino.get()) return ResultadoDerivacion.MISMO_ALBERGUE;
+        Optional<Damnificado> persona = origen.get().buscarDamnificadoPorId(idDamnificado);
+        if (persona.isEmpty()) return ResultadoDerivacion.DAMNIFICADO_NO_ENCONTRADO;
+        if (!destino.get().tieneCupo()) return ResultadoDerivacion.DESTINO_SIN_CUPO;
         origen.get().retirar(persona.get());
         if (!destino.get().alojar(persona.get())) {
-            origen.get().alojar(persona.get()); // defensa: si algo fallara, vuelve al origen
+            origen.get().alojar(persona.get());
             return ResultadoDerivacion.DESTINO_SIN_CUPO;
         }
         actualizarSemaforo(origen.get());
@@ -153,13 +172,13 @@ public class AlbergueService {
         return ResultadoDerivacion.DERIVADO;
     }
 
-    /** RF-08: registra la salida voluntaria de un damnificado y libera su cupo. */
-    public boolean registrarSalida(String idAlbergue, String dni) {
+    /** RF-08: registra la salida voluntaria usando el código del damnificado. */
+    public boolean registrarSalida(String idAlbergue, String idDamnificado) {
         Optional<Albergue> albergue = buscarPorId(idAlbergue);
         if (albergue.isEmpty()) {
             return false;
         }
-        Optional<Damnificado> persona = albergue.get().buscarDamnificado(dni);
+        Optional<Damnificado> persona = albergue.get().buscarDamnificadoPorId(idDamnificado);
         if (persona.isEmpty() || !albergue.get().retirar(persona.get())) {
             return false;
         }
@@ -337,8 +356,11 @@ public class AlbergueService {
 
         if (albergue.getOcupacionActual() > 0) {
             for (TipoRecurso tipo : TipoRecurso.values()) {
-                // El AGUA ya se evalúa en validarMinimosSphere (evita alertas duplicadas).
-                if (tipo.esCritico() && tipo != TipoRecurso.AGUA && !albergue.tieneRecursoDisponible(tipo)) {
+                // Un recurso crítico ausente también es una carencia; no se confunde
+                // "sin registro" con "sin necesidad". El agua además se valida por litros.
+                if (tipo.esCritico() && !albergue.tieneRecursoDisponible(tipo)
+                        && (tipo != TipoRecurso.AGUA || validarMinimosSphere(albergue).stream()
+                        .noneMatch(a -> a.codigo().equals("AGUA")))) {
                     alertas.add(new Alerta(NivelSemaforo.ROJO, "RECURSO_FALTANTE",
                             "Sin stock vigente del recurso crítico " + tipo + "."));
                 }
@@ -405,13 +427,21 @@ public class AlbergueService {
     public void reemplazarAlbergues(List<Albergue> nuevos) {
         Set<String> ids = new HashSet<>();
         Set<String> dnis = new HashSet<>();
+        Set<String> nombres = new HashSet<>();
+        Set<String> idsDamnificados = new HashSet<>();
         for (Albergue a : nuevos) {
             if (!ids.add(a.getId().toLowerCase())) {
                 throw new IllegalArgumentException("ID de albergue repetido: " + a.getId());
             }
             for (Damnificado d : a.getDamnificados()) {
+                if (!idsDamnificados.add(d.getId().toUpperCase(Locale.ROOT))) {
+                    throw new IllegalArgumentException("ID de damnificado repetido: " + d.getId());
+                }
                 if (!dnis.add(d.getDni())) {
                     throw new IllegalArgumentException("DNI repetido en la red: " + d.getDni());
+                }
+                if (!nombres.add(d.getNombreCompleto().toLowerCase(Locale.ROOT))) {
+                    throw new IllegalArgumentException("Nombre de damnificado repetido: " + d.getNombreCompleto());
                 }
             }
         }

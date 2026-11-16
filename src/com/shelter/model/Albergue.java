@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.text.Normalizer;
 
 /**
  * Albergue temporal de la red.
@@ -30,6 +31,7 @@ public class Albergue {
     private final double areaM2;
     private final List<Damnificado> damnificados = new ArrayList<>();
     private final List<Recurso> recursos = new ArrayList<>();
+    private int siguienteNumeroDamnificado = 1;
     private NivelSemaforo estadoSemaforo = NivelSemaforo.VERDE;
 
     // Constructor original (4 parámetros): se conserva. Sin área ni tipo de infraestructura.
@@ -86,13 +88,19 @@ public class Albergue {
     // Damnificados
     // ------------------------------------------------------------------
 
-    /** Aloja a un damnificado. Devuelve false si no hay cupo o si su DNI ya está en este albergue. */
+    /** Aloja a un damnificado y le asigna un código propio de este refugio. */
     public boolean alojar(Damnificado damnificado) {
         if (damnificado == null) {
             throw new IllegalArgumentException("El damnificado no puede ser nulo.");
         }
-        if (!tieneCupo() || buscarDamnificado(damnificado.getDni()).isPresent()) {
+        if (!tieneCupo()
+                || buscarDamnificado(damnificado.getDni()).isPresent()
+                || damnificados.stream().anyMatch(d -> d.getNombreCompleto()
+                .equalsIgnoreCase(damnificado.getNombreCompleto()))) {
             return false;
+        }
+        if (!damnificado.tieneIdAsignado() || !damnificado.getId().startsWith(prefijoRefugio() + "-")) {
+            damnificado.asignarId(generarIdDamnificado());
         }
         damnificados.add(damnificado);
         return true;
@@ -109,6 +117,49 @@ public class Albergue {
         }
         String buscado = dni.trim();
         return damnificados.stream().filter(d -> d.getDni().equals(buscado)).findFirst();
+    }
+
+    public Optional<Damnificado> buscarDamnificadoPorId(String id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return damnificados.stream().filter(d -> d.getId().equalsIgnoreCase(id.trim())).findFirst();
+    }
+
+    /**
+     * Genera un prefijo legible a partir del nombre: San Miguel -> SANMI,
+     * Refugio Central -> REFCE. El sufijo ordenado evita colisiones dentro del refugio.
+     */
+    private String prefijoRefugio() {
+        String base = Normalizer.normalize(nombre, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("[^A-Za-z0-9 ]", " ")
+                .trim()
+                .toUpperCase();
+        String[] palabras = base.split("\\s+");
+        StringBuilder prefijo = new StringBuilder();
+        for (String palabra : palabras) {
+            if (!palabra.isEmpty() && prefijo.length() < 5) {
+                prefijo.append(palabra, 0, Math.min(3, palabra.length()));
+            }
+        }
+        if (prefijo.length() < 5 && palabras.length == 1) {
+            prefijo.setLength(0);
+            prefijo.append(palabras[0], 0, Math.min(5, palabras[0].length()));
+        }
+        while (prefijo.length() < 3) {
+            prefijo.append('X');
+        }
+        return prefijo.substring(0, Math.min(5, prefijo.length()));
+    }
+
+    private String generarIdDamnificado() {
+        String prefijo = prefijoRefugio();
+        String candidato;
+        do {
+            candidato = prefijo + "-" + String.format("%05d", siguienteNumeroDamnificado++);
+        } while (buscarDamnificadoPorId(candidato).isPresent());
+        return candidato;
     }
 
     /** Lista de solo lectura: para modificar el albergue usar alojar() / retirar(). */

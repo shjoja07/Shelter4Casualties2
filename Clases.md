@@ -58,7 +58,7 @@ classDiagram
         INGRESADO
         ALBERGUE_NO_ENCONTRADO
         SIN_CUPO
-        DNI_DUPLICADO
+        IDENTIDAD_DUPLICADA
     }
 
     class ResultadoDerivacion {
@@ -95,6 +95,7 @@ classDiagram
 
     class RegistroAsignacion {
         -idAlbergue: String
+        -idDamnificado: String
         -dni: String
         -nombreDamnificado: String
         -recurso: String
@@ -120,6 +121,7 @@ classDiagram
         +getPorcentajeOcupacion(): double
         +alojar(Damnificado): boolean
         +retirar(Damnificado): boolean
+        +buscarDamnificadoPorId(String): Optional~Damnificado~
         +buscarDamnificado(String): Optional~Damnificado~
         +registrarRecurso(Recurso): Recurso
         +getCantidadTotal(TipoRecurso): double
@@ -185,11 +187,15 @@ classDiagram
 
     class Damnificado {
         <<abstract>>
+        #id: String
         #dni: String
         #nombreCompleto: String
         #edad: int
         #categoria: CategoriaEdad
         #atencionMedica: boolean
+        +getId(): String
+        +tieneIdAsignado(): boolean
+        +asignarId(String): void
         +getNivelPrioridad(): NivelPrioridad
         +determinarNivelPrioridad(): String
         +necesitaMedicina(): boolean
@@ -299,5 +305,5 @@ classDiagram
 
     note for Damnificado "La prioridad se decide por polimorfismo (getNivelPrioridad). Menor sin tutor sube a ALTA. Vulnerable nunca es BAJA."
 
-    note for PersistenciaJson "Formato version 1. Los campos nuevos son opcionales al cargar, por lo que los archivos antiguos siguen funcionando."
+    note for PersistenciaJson "Formato version 2. Los códigos de damnificado se persisten como texto y pertenecen al refugio que los generó."
 ```

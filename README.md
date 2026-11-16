@@ -54,8 +54,13 @@ módulo 4 del menú. Un archivo dañado nunca borra los datos que están en memo
 ## Reglas principales
 - **Prioridad** (1 más urgente a 4): atención médica = CRÍTICA; gestante o niño de 5 años o menos o adulto mayor
   (60+) = ALTA; vulnerable en el resto = MEDIA (nunca baja); menor sin tutor = ALTA; el resto = BAJA.
+- **Identidad**: cada damnificado recibe al ingresar un código alfanumérico ordenado y dependiente del refugio:
+  `SANMI-00001`, `SANMI-00002`, etc. El DNI y el nombre completo se conservan como datos secundarios para
+  detectar duplicados y validar registros. Al trasladarse, el código cambia al prefijo del nuevo refugio.
 - **Semáforo** = la gravedad más alta entre: ocupación (amarillo desde 70 %, rojo desde 90 %), agua
   (menos de 15 L/persona amarillo; menos de 7.5 rojo), espacio vital (menos de 3.5 m²/persona rojo),
   recursos críticos sin stock con gente alojada (rojo) y lotes vencidos (amarillo).
+- **Detalle Swing**: al seleccionar un refugio en la tabla inicial se actualizan sus alertas, damnificados
+  e inventario en el panel inferior.
 - **Reparto**: primero por nivel de prioridad y, a igual nivel, quien lleva más tiempo sin recibir ese recurso.
   La medicina solo se entrega a quien la necesita. Al agua le corresponden 15 L por persona por defecto.

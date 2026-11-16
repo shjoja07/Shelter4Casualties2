@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
  */
 public class RegistroAsignacion {
     private String idAlbergue;
+    private String idDamnificado;
     private String dni;
     private String nombreDamnificado;
     private String recurso;
@@ -16,15 +17,15 @@ public class RegistroAsignacion {
     private LocalDateTime fechaHora;
 
     // Entrega nueva: la fecha y hora son las del momento
-    public RegistroAsignacion(String idAlbergue, String dni, String nombreDamnificado,
+    public RegistroAsignacion(String idAlbergue, String idDamnificado, String dni, String nombreDamnificado,
                               String recurso, String unidad, double cantidad) {
-        this(idAlbergue, dni, nombreDamnificado, recurso, unidad, cantidad, LocalDateTime.now());
+        this(idAlbergue, idDamnificado, dni, nombreDamnificado, recurso, unidad, cantidad, LocalDateTime.now());
     }
 
-    // Entrega con fecha y hora conocidas (se usa al cargar el historial desde JSON)
-    public RegistroAsignacion(String idAlbergue, String dni, String nombreDamnificado,
+    public RegistroAsignacion(String idAlbergue, String idDamnificado, String dni, String nombreDamnificado,
                               String recurso, String unidad, double cantidad, LocalDateTime fechaHora) {
         this.idAlbergue = idAlbergue;
+        this.idDamnificado = idDamnificado;
         this.dni = dni;
         this.nombreDamnificado = nombreDamnificado;
         this.recurso = recurso;
@@ -36,6 +37,7 @@ public class RegistroAsignacion {
     // Getters
     public String getIdAlbergue() { return idAlbergue; }
     public String getDni() { return dni; }
+    public String getIdDamnificado() { return idDamnificado; }
     public String getNombreDamnificado() { return nombreDamnificado; }
     public String getRecurso() { return recurso; }
     public String getUnidad() { return unidad; }
@@ -44,8 +46,8 @@ public class RegistroAsignacion {
 
     @Override
     public String toString() {
-        return String.format("%s | Albergue %s | %s (DNI %s) recibió %.2f %s de %s",
+        return String.format("%s | Albergue %s | %s %s (DNI %s) recibió %.2f %s de %s",
                 fechaHora.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                idAlbergue, nombreDamnificado, dni, cantidad, unidad, recurso);
+                idAlbergue, idDamnificado, nombreDamnificado, dni, cantidad, unidad, recurso);
     }
 }

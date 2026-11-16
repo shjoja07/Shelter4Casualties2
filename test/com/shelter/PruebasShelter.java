@@ -128,6 +128,16 @@ public class PruebasShelter {
             verificar(!s.registrarAlbergue(new Albergue("a1", "Otro", "d", 5)), "a1 ya existe como A1");
             verificar(s.getAlbergues().size() == 2, "no se agregó");
         });
+        prueba("cada ingreso recibe un código alfanumérico del refugio", () -> {
+            AlbergueService s = servicioConDosAlbergues();
+            Damnificado primero = general(30);
+            Damnificado segundo = general(31);
+            verificar(s.registrarIngreso("A1", primero) == ResultadoIngreso.INGRESADO, "primer ingreso");
+            verificar(s.registrarIngreso("A1", segundo) == ResultadoIngreso.INGRESADO, "segundo ingreso");
+            verificar(primero.getId().matches("CENTR-\\d{5}"), "prefijo del refugio: " + primero.getId());
+            verificar(segundo.getId().matches("CENTR-\\d{5}"), "prefijo del refugio: " + segundo.getId());
+            verificar(!primero.getId().equals(segundo.getId()), "códigos distintos");
+        });
         prueba("edad inválida y menor de 18 estricto", () -> {
             esperarExcepcion(() -> new DamnificadoGeneral(dni(), "X", -1, false), "edad negativa");
             esperarExcepcion(() -> new DamnificadoGeneral(dni(), "X", 200, false), "edad > 120");
@@ -189,7 +199,7 @@ public class PruebasShelter {
             Damnificado d1 = general(30);
             verificar(s.registrarIngreso("A1", d1) == ResultadoIngreso.INGRESADO, "ingresa");
             verificar(s.registrarIngreso("ZZ", general(30)) == ResultadoIngreso.ALBERGUE_NO_ENCONTRADO, "no existe");
-            verificar(s.registrarIngreso("A2", d1) == ResultadoIngreso.DNI_DUPLICADO, "mismo DNI en otro albergue");
+            verificar(s.registrarIngreso("A2", d1) == ResultadoIngreso.IDENTIDAD_DUPLICADA, "misma identidad en otro albergue");
             s.registrarIngreso("A1", general(31));
             verificar(s.registrarIngreso("A1", general(32)) == ResultadoIngreso.SIN_CUPO, "A1 (cap. 2) lleno");
         });
@@ -197,7 +207,8 @@ public class PruebasShelter {
             AlbergueService s = servicioConDosAlbergues();
             Damnificado d = general(40);
             s.registrarIngreso("A1", d);
-            verificar(s.derivarDamnificado("A1", "A2", d.getDni()) == ResultadoDerivacion.DERIVADO, "derivado");
+            String idOrigen = d.getId();
+            verificar(s.derivarDamnificado("A1", "A2", idOrigen) == ResultadoDerivacion.DERIVADO, "derivado");
             Albergue a1 = s.buscarPorId("A1").get();
             Albergue a2 = s.buscarPorId("A2").get();
             verificar(a1.getOcupacionActual() == 0, "origen quedó en 0");
@@ -209,9 +220,10 @@ public class PruebasShelter {
             AlbergueService s = servicioConDosAlbergues();
             Damnificado d = general(40);
             s.registrarIngreso("A1", d);
-            verificar(s.derivarDamnificado("A1", "A1", d.getDni()) == ResultadoDerivacion.MISMO_ALBERGUE, "mismo albergue");
-            verificar(s.derivarDamnificado("A1", "ZZ", d.getDni()) == ResultadoDerivacion.DESTINO_NO_ENCONTRADO, "destino");
-            verificar(s.derivarDamnificado("ZZ", "A2", d.getDni()) == ResultadoDerivacion.ORIGEN_NO_ENCONTRADO, "origen");
+            String id = d.getId();
+            verificar(s.derivarDamnificado("A1", "A1", id) == ResultadoDerivacion.MISMO_ALBERGUE, "mismo albergue");
+            verificar(s.derivarDamnificado("A1", "ZZ", id) == ResultadoDerivacion.DESTINO_NO_ENCONTRADO, "destino");
+            verificar(s.derivarDamnificado("ZZ", "A2", id) == ResultadoDerivacion.ORIGEN_NO_ENCONTRADO, "origen");
             verificar(s.derivarDamnificado("A1", "A2", "99999999") == ResultadoDerivacion.DAMNIFICADO_NO_ENCONTRADO, "persona");
             verificar(s.buscarPorId("A1").get().getOcupacionActual() == 1, "A1 sigue con 1");
         });
@@ -223,16 +235,16 @@ public class PruebasShelter {
             Damnificado y = general(31);
             s.registrarIngreso("A", x);
             s.registrarIngreso("B", y);
-            verificar(s.derivarDamnificado("A", "B", x.getDni()) == ResultadoDerivacion.DESTINO_SIN_CUPO, "sin cupo");
+            verificar(s.derivarDamnificado("A", "B", x.getId()) == ResultadoDerivacion.DESTINO_SIN_CUPO, "sin cupo");
             verificar(s.buscarPorId("A").get().buscarDamnificado(x.getDni()).isPresent(), "x sigue en A");
         });
         prueba("registrarSalida libera el cupo", () -> {
             AlbergueService s = servicioConDosAlbergues();
             Damnificado d = general(40);
             s.registrarIngreso("A1", d);
-            verificar(s.registrarSalida("A1", d.getDni()), "sale");
+            verificar(s.registrarSalida("A1", d.getId()), "sale");
             verificar(s.buscarPorId("A1").get().getOcupacionActual() == 0, "cupo liberado");
-            verificar(!s.registrarSalida("A1", d.getDni()), "no puede salir dos veces");
+            verificar(!s.registrarSalida("A1", d.getId()), "no puede salir dos veces");
         });
 
         // ------------------------------------------------------------------
@@ -500,7 +512,7 @@ public class PruebasShelter {
         prueba("un JSON con ocupación que no coincide se rechaza", () -> {
             Path tmp = Files.createTempFile("shelter", ".json");
             try {
-                Files.writeString(tmp, "{\"version\":1,\"albergues\":[{\"id\":\"A1\",\"nombre\":\"N\",\"distrito\":\"D\","
+                Files.writeString(tmp, "{\"version\":2,\"albergues\":[{\"id\":\"A1\",\"nombre\":\"N\",\"distrito\":\"D\","
                         + "\"capacidadMaxima\":5,\"ocupacionActual\":3,\"estadoSemaforo\":\"VERDE\","
                         + "\"damnificados\":[],\"recursos\":[]}],\"historial\":[]}");
                 boolean rechazado = false;
@@ -514,10 +526,10 @@ public class PruebasShelter {
                 Files.deleteIfExists(tmp);
             }
         });
-        prueba("un JSON del formato anterior (sin campos nuevos) sigue cargando", () -> {
+        prueba("un JSON sin códigos de damnificado asigna códigos al cargar", () -> {
             Path tmp = Files.createTempFile("shelter", ".json");
             try {
-                Files.writeString(tmp, "{\"version\":1,\"albergues\":[{\"id\":\"A1\",\"nombre\":\"N\",\"distrito\":\"D\","
+                Files.writeString(tmp, "{\"version\":2,\"albergues\":[{\"id\":\"A1\",\"nombre\":\"N\",\"distrito\":\"D\","
                         + "\"capacidadMaxima\":5,\"ocupacionActual\":1,\"estadoSemaforo\":\"VERDE\","
                         + "\"damnificados\":[{\"tipo\":\"GENERAL\",\"dni\":\"40000001\",\"nombreCompleto\":\"Pedro\",\"edad\":30}],"
                         + "\"recursos\":[]}],\"historial\":[]}");

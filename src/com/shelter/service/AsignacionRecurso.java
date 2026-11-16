@@ -70,16 +70,16 @@ public class AsignacionRecurso {
         // List.sort es ESTABLE: a igualdad total se conserva el orden de llegada al albergue.
         priorizados.sort(Comparator
                 .comparingInt((Damnificado d) -> albergueService.calcularPrioridadAsignacion(d))
-                .thenComparing(d -> ultimasEntregas.getOrDefault(d.getDni(), LocalDateTime.MIN)));
+                .thenComparing(d -> ultimasEntregas.getOrDefault(d.getId(), LocalDateTime.MIN)));
         return priorizados;
     }
 
-    // Fecha de la última entrega de ese recurso en ese albergue, por DNI (según el historial).
+    // Fecha de la última entrega por ID ordenado (el DNI queda solo como dato histórico).
     private Map<String, LocalDateTime> ultimasEntregas(String idAlbergue, String nombreRecurso) {
         Map<String, LocalDateTime> mapa = new HashMap<>();
         for (RegistroAsignacion r : historial) {
             if (r.getIdAlbergue().equalsIgnoreCase(idAlbergue) && r.getRecurso().equalsIgnoreCase(nombreRecurso)) {
-                mapa.merge(r.getDni(), r.getFechaHora(), (a, b) -> a.isAfter(b) ? a : b);
+                mapa.merge(r.getIdDamnificado(), r.getFechaHora(), (a, b) -> a.isAfter(b) ? a : b);
             }
         }
         return mapa;
@@ -135,6 +135,7 @@ public class AsignacionRecurso {
             // Creamos la constancia de entrega (RNF-06: marca de tiempo)
             RegistroAsignacion registro = new RegistroAsignacion(
                 albergue.getId(),
+                d.getId(),
                 d.getDni(),
                 d.getNombreCompleto(),
                 recurso.getNombre(),

@@ -1,4 +1,4 @@
-# Guía de cambios — Shelter4Casualties2 (versión previa a Swing)
+# Guía de cambios — Shelter4Casualties2
 
 Esta guía acompaña al proyecto corregido. Explica qué se cambió en cada uno de los 7 pasos, qué decisiones
 de diseño necesitan confirmación del grupo, cómo conectar la interfaz Swing y qué queda pendiente.
@@ -8,12 +8,23 @@ de diseño necesitan confirmación del grupo, cómo conectar la interfaz Swing y
 | Qué | Resultado |
 |---|---|
 | Compilación con `javac --release 17 -Xlint:all` | Sin errores ni advertencias |
-| `PruebasShelter` (41 pruebas) | 41 exitosas, 0 fallidas |
+| `PruebasShelter` (42 pruebas) | 42 exitosas, 0 fallidas |
 | Prueba de humo de `Main` con entradas inválidas (letras, DNI corto, fecha mala, IDs inexistentes), albergue lleno con derivación, derivar, salida, inventario, reparto, Sphere, guardar y reinicio con carga automática | Sin caídas; el estado se recuperó al reiniciar |
 
 Nota de honestidad: las pruebas se ejecutaron en un JDK 21 compilando con `--release 17`. Eso garantiza que
-no se usa ninguna API posterior a Java 17, pero no se ejecutó en un runtime 17 real. No se probó Swing
-(todavía no existe) ni NetBeans.
+no se usa ninguna API posterior a Java 17, pero no se ejecutó en un runtime 17 real.
+
+## 3.1 Identidad por refugio y Swing
+
+- `Damnificado` usa un código alfanumérico asignado por el refugio, como `SANMI-00001`.
+- El prefijo se obtiene del nombre del refugio y el sufijo numérico se incrementa dentro del refugio.
+- Al trasladar a una persona, se genera un nuevo código con el prefijo del refugio destino.
+- DNI y nombre completo se mantienen como datos secundarios para impedir duplicados en la red.
+- JSON persiste `id` e `idDamnificado` como texto.
+- Derivación, salida, reparto e historial usan el código alfanumérico.
+- La tabla inicial de Swing muestra el detalle completo del refugio seleccionado: alertas, personas y recursos.
+- La carencia de un recurso crítico se alerta explícitamente cuando hay ocupantes; AGUA ausente ya no se
+  interpreta como inventario correcto y produce semáforo rojo mediante la validación Sphere.
 
 ## 2. Cómo integrarlo al repositorio
 
@@ -31,20 +42,21 @@ no se usa ninguna API posterior a Java 17, pero no se ejecutó en un runtime 17 
 **Eliminar del repo**: `SphereConstantes_1.java` y la copia de `SphereConstantes.java` que está fuera de
 `src/com/shelter/config/`. Dos copias de la misma clase impiden compilar.
 
-Si alguien del grupo tiene código propio que llame a las firmas antiguas, ver la tabla de la sección 5.
+Las firmas de la sección 5 describen el contrato nuevo; las llamadas por DNI dejaron de ser operaciones de gestión.
 
 ## 3. Qué se hizo en cada paso
 
 ### Paso 1 — Bugs y validaciones
-- **Derivación (RF-08)**: ahora retira al damnificado del origen y lo aloja en el destino; ambas ocupaciones
-  y semáforos quedan correctos. Recibe el DNI, no un objeto suelto. Casos de error distinguidos por enum.
+- **Derivación (RF-08)**: ahora recibe el código alfanumérico, retira al damnificado del origen y lo aloja
+  en el destino; ambas ocupaciones y semáforos quedan correctos y el código se regenera con el nuevo prefijo.
 - **Reparto (RF-04)**: la entrega es `min(cantidad por persona, restante, stock)`. Se acabó la excepción
   "Stock insuficiente" con stock fraccionario.
 - **Entrada de datos**: toda la lectura valida y repite la pregunta. Sin `nextInt()`/`nextBoolean()` directos.
   Se corrigió la doble pregunta de capacidad y el `Enter` extra. Una fecha mal escrita se vuelve a pedir
   (antes quedaba como "no vence"). Los decimales aceptan coma o punto.
-- **Integridad**: ID de albergue único (sin distinguir mayúsculas), capacidad > 0, edad 0–120, DNI y nombre
-  no vacíos, menor = menos de 18 años, un mismo DNI no puede estar en dos lugares de la red.
+- **Integridad**: ID de albergue único (sin distinguir mayúsculas), código de damnificado con formato
+  `PREFIJO-00000`, capacidad > 0, edad 0–120, DNI y nombre no vacíos, menor = menos de 18 años, un mismo
+  DNI o nombre no puede estar en dos lugares de la red.
 - **Constructor de `DamnificadoMenor`**: ya guarda nombre del tutor y parentesco (antes quedaban `null`).
 
 ### Paso 2 — Prioridad unificada
@@ -79,9 +91,8 @@ Si alguien del grupo tiene código propio que llame a las firmas antiguas, ver l
 - Si no hay cupo al registrar, se ofrece registrar en otro albergue con cupo (lo que prometía el avance 2).
 - Al iniciar se carga `datos_shelter.json` si existe; al salir se guarda. Al salir con la consola cerrada
   también se guarda.
-- `PersistenciaJson` guarda y lee los campos nuevos como **opcionales** (los archivos de la versión
-  anterior siguen cargando), valida que la ocupación coincida con las personas y rechaza IDs o DNI repetidos
-  sin tocar el estado actual.
+- `PersistenciaJson` guarda y lee códigos alfanuméricos, valida que la ocupación coincida con las personas y
+  rechaza códigos, DNI o nombres repetidos sin tocar el estado actual.
 
 ### Paso 6 — Servicios sin `println`
 - `AlbergueService` y `AsignacionRecurso` ya no imprimen. Devuelven booleanos, enums, listas u `Optional`, o
@@ -90,9 +101,9 @@ Si alguien del grupo tiene código propio que llame a las firmas antiguas, ver l
 
 ### Paso 7 — Documentación y pruebas
 - `Clases.md`, `CasosDeUso.md` y `README.md` actualizados al código real.
-- `PruebasShelter`: 41 pruebas sin dependencias externas (corren con solo Java). Cubren validaciones,
+- `PruebasShelter`: 42 pruebas sin dependencias externas (corren con solo Java). Cubren validaciones,
   prioridad, ingreso/derivación/salida, reparto (incluido stock fraccionario y desempate), semáforo y Sphere,
-  filtros, JSON (ida y vuelta, archivo dañado, formato antiguo, inconsistencias) y rendimiento con 2000
+  filtros, JSON (ida y vuelta, archivo dañado, asignación automática de códigos e inconsistencias) y rendimiento con 2000
   ocupantes (RNF-02).
 
 ## 4. Decisiones que el grupo debe confirmar
@@ -115,7 +126,7 @@ Estas decisiones las tomé yo para que el sistema fuera coherente. Ninguna viene
 7. **Menor = menos de 18 años**, pero `CategoriaEdad.NINO` sigue siendo hasta 12 años y "niño pequeño" (prioridad
    alta) hasta 5. Los adolescentes de 13 a 17 se registran como Menor pero su categoría por edad es JOVEN.
 8. **La medicina solo se reparte** a quien requiere atención médica, es gestante o tiene enfermedad crónica.
-9. **Un mismo DNI no puede estar en dos albergues** (se rechaza el ingreso).
+9. **Un mismo DNI o nombre completo no puede estar en dos albergues** (se rechaza el ingreso).
 10. **`ultimaAsignacion` no se agregó a `Damnificado`**: se lee del historial por recurso (ya persistido). El
     diagrama de clases se actualizó en consecuencia.
 
@@ -123,8 +134,8 @@ Estas decisiones las tomé yo para que el sistema fuera coherente. Ninguna viene
 
 | Antes | Ahora |
 |---|---|
-| `registrarIngreso(String, Damnificado): boolean` | `ResultadoIngreso` (INGRESADO, ALBERGUE_NO_ENCONTRADO, SIN_CUPO, DNI_DUPLICADO) |
-| `derivarDamnificado(String, String, Damnificado): boolean` | `derivarDamnificado(String, String, String dni): ResultadoDerivacion` |
+| `registrarIngreso(String, Damnificado): boolean` | `ResultadoIngreso` (INGRESADO, ALBERGUE_NO_ENCONTRADO, SIN_CUPO, IDENTIDAD_DUPLICADA) |
+| `derivarDamnificado(String, String, Damnificado): boolean` | `derivarDamnificado(String, String, String idDamnificado): ResultadoDerivacion` |
 | `registrarAlbergue(Albergue): void` | `boolean` (false si el ID ya existe) |
 | `mostrarPanelSemaforo(): void` | `obtenerPanelSemaforo(): List<Albergue>` |
 | `calcularPrioridadAsignacion(...)`: 1 o 2 | 1 a 4 (CRÍTICA=1 … BAJA=4) |
@@ -146,7 +157,7 @@ Estas decisiones las tomé yo para que el sistema fuera coherente. Ninguna viene
 | Filtros de la tabla (RF-07) | `servicio.filtrarAlbergues(new FiltroAlbergue(cupos, distrito, nivel, recursoFaltante))`; `null` = no filtrar |
 | Registrar albergue | `new Albergue(id, nombre, distrito, tipo, capacidad, area)` + `servicio.registrarAlbergue(...)` |
 | Registrar damnificado | crear `DamnificadoGeneral/Menor/Vulnerable` + `servicio.registrarIngreso(id, d)` |
-| Derivar / salida | `servicio.derivarDamnificado(origen, destino, dni)` / `servicio.registrarSalida(id, dni)` |
+| Derivar / salida | `servicio.derivarDamnificado(origen, destino, idDamnificado)` / `servicio.registrarSalida(id, idDamnificado)` |
 | Inventario | `servicio.registrarRecurso(...)`, `servicio.actualizarRecurso(...)` |
 | Repartir | `asignacion.asignar(albergue, recurso, total, porPersona)`; sugerido: `cantidadSugeridaPorPersona(recurso)` |
 | Historial | `asignacion.getHistorial()` |
@@ -163,8 +174,8 @@ Pautas:
   recalcula el semáforo.
 - **Hilos**: nada es seguro entre hilos. Usar todo desde el hilo de Swing (EDT); si guardar/cargar se lleva
   a un `SwingWorker`, no tocar los servicios mientras corre.
-- **Validación de formularios**: reutilizar `Damnificado.esDniValido`, `Damnificado.EDAD_MAXIMA`,
-  `Damnificado.EDAD_MAYORIA` y los mensajes de las excepciones.
+- **Validación de formularios**: validar el código con `[A-Z0-9]{3,}-[0-9]{5}` y reutilizar
+  `Damnificado.esDniValido`, `Damnificado.EDAD_MAXIMA`, `Damnificado.EDAD_MAYORIA` y los mensajes de las excepciones.
 - **Accesibilidad del semáforo (RNF-01)**: mostrar también el texto (VERDE/AMARILLO/ROJO) y no solo el color.
 - La lógica de arranque (`Main.iniciarDatos`) y cierre (`guardarEn`) conviene extraerla a una clase pequeña
   cuando se haga la ventana principal, para que la usen la consola y Swing.

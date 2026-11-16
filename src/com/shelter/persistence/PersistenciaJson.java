@@ -28,7 +28,7 @@ import java.util.Map;
  *
  * Estructura del archivo:
  * {
- *   "version": 1,
+ *   "version": 2,
  *   "albergues": [ { ..., "damnificados": [...], "recursos": [...] } ],
  *   "historial": [ ... ]
  * }
@@ -36,7 +36,7 @@ import java.util.Map;
 public final class PersistenciaJson {
 
     /** Versión del formato. Se sube si cambia la estructura del archivo. */
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     private PersistenciaJson() {
     }
@@ -89,7 +89,7 @@ public final class PersistenciaJson {
         m.put("id", a.getId());
         m.put("nombre", a.getNombre());
         m.put("distrito", a.getDistrito());
-        // Campos nuevos (v1 compatible): al cargar son opcionales, así los archivos viejos siguen funcionando
+        // El formato v2 persiste el código de refugio de cada persona.
         m.put("tipoInfraestructura", a.getTipoInfraestructura());
         m.put("areaM2", a.getAreaM2());
         m.put("capacidadMaxima", a.getCapacidadMaxima());
@@ -124,6 +124,7 @@ public final class PersistenciaJson {
             throw new IllegalArgumentException(
                     "Tipo de damnificado no soportado para guardar: " + d.getClass().getSimpleName());
         }
+        m.put("id", d.getId());
         m.put("dni", d.getDni());
         m.put("nombreCompleto", d.getNombreCompleto());
         m.put("edad", d.getEdad());
@@ -158,6 +159,9 @@ public final class PersistenciaJson {
     private static Map<String, Object> registroAMapa(RegistroAsignacion r) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("idAlbergue", r.getIdAlbergue());
+        if (r.getIdDamnificado() != null && !r.getIdDamnificado().isBlank()) {
+            m.put("idDamnificado", r.getIdDamnificado());
+        }
         m.put("dni", r.getDni());
         m.put("nombreDamnificado", r.getNombreDamnificado());
         m.put("recurso", r.getRecurso());
@@ -207,12 +211,12 @@ public final class PersistenciaJson {
                 tipoInfra == null ? Albergue.INFRAESTRUCTURA_NO_ESPECIFICADA : tipoInfra,
                 entero(m, "capacidadMaxima"), decimalOpcional(m, "areaM2", 0.0));
 
-        // Los damnificados se cargan con alojar(): así se valida capacidad y DNI repetido.
+        // Los damnificados se cargan con alojar(): así se valida capacidad e ID repetido.
         for (Object o : lista(m, "damnificados")) {
             Damnificado d = mapaADamnificado(comoObjeto(o, "damnificados"));
             if (!a.alojar(d)) {
-                throw new IllegalArgumentException("No se pudo alojar al DNI " + d.getDni()
-                        + " en el albergue '" + a.getId() + "' (capacidad excedida o DNI repetido).");
+                throw new IllegalArgumentException("No se pudo alojar al ID " + d.getId()
+                        + " en el albergue '" + a.getId() + "' (capacidad excedida o ID repetido).");
             }
         }
         // La ocupación guardada debe coincidir con las personas guardadas (la ocupación ya no es un contador aparte)
@@ -229,20 +233,24 @@ public final class PersistenciaJson {
 
     private static Damnificado mapaADamnificado(Map<String, Object> m) {
         String tipo = texto(m, "tipo");
+        String id = textoOpcional(m, "id");
         String dni = texto(m, "dni");
         String nombre = texto(m, "nombreCompleto");
         int edad = entero(m, "edad");
 
-        // Los archivos antiguos solo guardaban atencionMedica en VULNERABLE: si falta, se asume false
+        // La atención médica ausente se interpreta como false en registros incompletos.
         boolean atencion = booleanoOpcional(m, "atencionMedica", false);
 
+        Damnificado damnificado;
         switch (tipo) {
             case "GENERAL":
-                return new DamnificadoGeneral(dni, nombre, edad, atencion);
+                damnificado = new DamnificadoGeneral(dni, nombre, edad, atencion);
+                break;
             case "MENOR":
-                return new DamnificadoMenor(dni, nombre, edad, atencion,
+                damnificado = new DamnificadoMenor(dni, nombre, edad, atencion,
                         textoOpcional(m, "dniTutor"), textoOpcional(m, "nombreTutor"),
                         textoOpcional(m, "parentesco"));
+                break;
             case "VULNERABLE": {
                 String condicion = textoOpcional(m, "condicion");
                 DamnificadoVulnerable v = new DamnificadoVulnerable(dni, nombre, edad, atencion,
@@ -250,11 +258,16 @@ public final class PersistenciaJson {
                         booleano(m, "estadoGestacion"), booleano(m, "enfermedadCronica"));
                 v.setAtendido(booleanoOpcional(m, "atendido", false));
                 v.setEstable(booleanoOpcional(m, "estable", false));
-                return v;
+                damnificado = v;
+                break;
             }
             default:
                 throw new IllegalArgumentException("Tipo de damnificado desconocido: " + tipo);
         }
+        if (id != null) {
+            damnificado.asignarId(id);
+        }
+        return damnificado;
     }
 
     private static Recurso mapaARecurso(Map<String, Object> m) {
@@ -270,7 +283,8 @@ public final class PersistenciaJson {
     }
 
     private static RegistroAsignacion mapaARegistro(Map<String, Object> m) {
-        return new RegistroAsignacion(texto(m, "idAlbergue"), texto(m, "dni"), texto(m, "nombreDamnificado"),
+        String id = texto(m, "idDamnificado");
+        return new RegistroAsignacion(texto(m, "idAlbergue"), id, texto(m, "dni"), texto(m, "nombreDamnificado"),
                 texto(m, "recurso"), texto(m, "unidad"), decimal(m, "cantidad"),
                 LocalDateTime.parse(texto(m, "fechaHora")));
     }
@@ -319,6 +333,7 @@ public final class PersistenciaJson {
         }
         throw new IllegalArgumentException("El campo '" + clave + "' debe ser un entero.");
     }
+
 
     private static double decimal(Map<String, Object> m, String clave) {
         if (m.get(clave) instanceof Number n) {

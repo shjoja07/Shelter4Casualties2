@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "albergues": [
     {
       "id": "A1",
@@ -13,6 +13,7 @@
       "damnificados": [
         {
           "tipo": "GENERAL",
+          "id": "REFCE-00001",
           "dni": "70638676",
           "nombreCompleto": "david adrian",
           "edad": 20,
@@ -20,6 +21,7 @@
         },
         {
           "tipo": "VULNERABLE",
+          "id": "REFCE-00002",
           "dni": "70696952",
           "nombreCompleto": "jojita",
           "edad": 19,
@@ -53,6 +55,7 @@
       "damnificados": [
         {
           "tipo": "VULNERABLE",
+          "id": "REFNO-00001",
           "dni": "76753543",
           "nombreCompleto": "ggergrgr",
           "edad": 19,
@@ -65,6 +68,7 @@
         },
         {
           "tipo": "VULNERABLE",
+          "id": "REFNO-00002",
           "dni": "50505050",
           "nombreCompleto": "eduardo",
           "edad": 25,
@@ -129,6 +133,7 @@
   "historial": [
     {
       "idAlbergue": "A1",
+      "idDamnificado": "REFCE-00002",
       "dni": "70696952",
       "nombreDamnificado": "jojita",
       "recurso": "Agua potable",
@@ -138,6 +143,7 @@
     },
     {
       "idAlbergue": "A1",
+      "idDamnificado": "REFCE-00001",
       "dni": "70638676",
       "nombreDamnificado": "david adrian",
       "recurso": "Agua potable",
@@ -147,6 +153,7 @@
     },
     {
       "idAlbergue": "A1",
+      "idDamnificado": "REFCE-00002",
       "dni": "70696952",
       "nombreDamnificado": "jojita",
       "recurso": "Agua potable",
@@ -156,6 +163,7 @@
     },
     {
       "idAlbergue": "A1",
+      "idDamnificado": "REFCE-00001",
       "dni": "70638676",
       "nombreDamnificado": "david adrian",
       "recurso": "Agua potable",

@@ -3,7 +3,8 @@ package com.shelter.model;
 /**
  * Clase padre de todo damnificado. Cada subclase define su propia prioridad.
  *
- *  - dni y nombreCompleto son FINAL: la identificación no se debe cambiar.
+ *  - id es un código alfanumérico asignado por el refugio (por ejemplo SANMI-00001);
+ *    DNI y nombreCompleto son datos secundarios para verificar duplicados.
  *  - La atención médica vive aquí, no en los hijos: cualquier persona
  *    (general, menor o vulnerable) puede necesitarla.
  *  - Se agrega getNivelPrioridad() abstracto: la prioridad se decide por polimorfismo, de modo que
@@ -27,6 +28,7 @@ public abstract class Damnificado {
     /** Longitud del DNI peruano. */
     public static final int LONGITUD_DNI = 8;
 
+    protected String id;
     protected final String dni;
     protected final String nombreCompleto;
     protected int edad;
@@ -51,6 +53,7 @@ public abstract class Damnificado {
             throw new IllegalArgumentException("El nombre no puede estar vacío.");
         }
         validarEdad(edad);
+        this.id = "";
         this.dni = dni.trim();
         this.nombreCompleto = nombreCompleto.trim();
         this.edad = edad;
@@ -114,6 +117,24 @@ public abstract class Damnificado {
     // --- Getters y Setters ---
     public String getDni() { return dni; }
 
+    /** Código primario asignado por el refugio al formalizar el ingreso. */
+    public String getId() { return id; }
+
+    public boolean tieneIdAsignado() {
+        return !id.isBlank();
+    }
+
+    /**
+     * Cambia el código al ingresar o trasladar a la persona a un refugio.
+     * El servicio es quien decide el código; el modelo solo valida su formato.
+     */
+    public void asignarId(String nuevoId) {
+        if (nuevoId == null || !nuevoId.matches("[A-Z0-9]{3,}-\\d{5}")) {
+            throw new IllegalArgumentException("El ID debe tener formato alfanumérico, por ejemplo SANMI-00001.");
+        }
+        this.id = nuevoId;
+    }
+
     public String getNombreCompleto() { return nombreCompleto; }
 
     public int getEdad() { return edad; }
@@ -130,19 +151,20 @@ public abstract class Damnificado {
 
     public void setAtencionMedica(boolean atencionMedica) { this.atencionMedica = atencionMedica; }
 
-    // Dos damnificados son la misma persona si tienen el mismo DNI (evita duplicados en listas).
+    // El ID identifica el registro; DNI/nombre se usan como validación secundaria en el servicio.
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof Damnificado otro && dni.equals(otro.dni);
+        return this == obj || (obj instanceof Damnificado otro && !id.isBlank() && id.equals(otro.id));
     }
 
     @Override
     public int hashCode() {
-        return dni.hashCode();
+        return id.isBlank() ? System.identityHashCode(this) : id.hashCode();
     }
 
     @Override
     public String toString() {
-        return nombreCompleto + " (DNI " + dni + ", " + edad + " años)";
+        String identificador = id.isBlank() ? "(sin ID)" : id;
+        return identificador + " - " + nombreCompleto + " (DNI " + dni + ", " + edad + " años)";
     }
 }

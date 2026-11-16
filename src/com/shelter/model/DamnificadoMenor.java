@@ -32,6 +32,7 @@ public class DamnificadoMenor extends Damnificado {
         this.parentesco = parentesco;
     }
 
+
     /** Presencia de tutor (requisito del avance 2). */
     public boolean tieneTutor() {
         return dniTutor != null && !dniTutor.isBlank();

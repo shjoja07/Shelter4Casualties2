@@ -12,11 +12,11 @@ flowchart LR
         RF01(["RF-01 Registrar nuevo albergue"])
         RF03(["RF-03 Registrar y actualizar inventario de recursos"])
         RF06(["RF-06 Validar mínimos Sphere y alertas"])
-        RF02(["RF-02 Registrar ingreso de damnificado"])
+        RF02(["RF-02 Registrar ingreso de damnificado<br/>(asigna código del refugio)"])
         RF04(["RF-04 Asignar recurso escaso por prioridad"])
         RF07(["RF-07 Filtrar albergues"])
         RF05(["RF-05 Consultar panel semáforo de la red"])
-        RF08(["RF-08 Registrar salida o reubicación"])
+        RF08(["RF-08 Registrar salida o reubicación<br/>(regenera código al trasladar)"])
         UC_Historial(["Ver historial de asignaciones"])
         UC_Persistencia(["Guardar / cargar datos (JSON)"])
 

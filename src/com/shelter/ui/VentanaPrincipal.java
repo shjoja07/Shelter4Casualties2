@@ -441,7 +441,7 @@ public class VentanaPrincipal extends JFrame {
 
         panelDerivar.add(new JLabel("Albergue de Origen:"));
         panelDerivar.add(cmbAlbergueOrigen);
-        panelDerivar.add(new JLabel("DNI del Damnificado:"));
+        panelDerivar.add(new JLabel("Código del Damnificado (ej. SANMI-00001):"));
         panelDerivar.add(txtDniDerivar);
         panelDerivar.add(new JLabel("Albergue de Destino:"));
         panelDerivar.add(cmbAlbergueDestino);
@@ -458,13 +458,13 @@ public class VentanaPrincipal extends JFrame {
 
         panelSalida.add(new JLabel("Albergue:"));
         panelSalida.add(cmbAlbergueSalida);
-        panelSalida.add(new JLabel("DNI del Damnificado:"));
+        panelSalida.add(new JLabel("Código del Damnificado (ej. SANMI-00001):"));
         panelSalida.add(txtDniSalida);
         panelSalida.add(new JLabel(""));
         panelSalida.add(btnSalida);
         btnSalida.addActionListener(e -> ejecutarSalidaVoluntaria());
 
-        // 3. Ubicar por DNI y seguimiento médico
+        // 3. Ubicar por DNI como verificación secundaria
         JPanel panelUbicar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 12));
         panelUbicar.setBorder(new TitledBorder("Ubicar Damnificado en la Red / Seguimiento Post-Atención"));
         JTextField txtDniBuscar = new JTextField(12);
@@ -475,7 +475,7 @@ public class VentanaPrincipal extends JFrame {
 
         btnBuscarDni.addActionListener(e -> {
             String dni = txtDniBuscar.getText().trim();
-            Optional<Albergue> optAlb = albergueService.ubicarDamnificado(dni);
+            Optional<Albergue> optAlb = albergueService.ubicarDamnificadoPorDni(dni);
             if (optAlb.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "No se encontró ningún damnificado con el DNI " + dni + " en la red.");
                 return;
@@ -571,8 +571,9 @@ public class VentanaPrincipal extends JFrame {
                             "Ingreso registrado con éxito.\nPrioridad asignada: " + nuevo.determinarNivelPrioridad(),
                             "Ingreso Exitoso", JOptionPane.INFORMATION_MESSAGE);
                 }
-                case DNI_DUPLICADO -> JOptionPane.showMessageDialog(this,
-                        "Ese DNI ya se encuentra alojado en la red de albergues.", "DNI Duplicado", JOptionPane.ERROR_MESSAGE);
+                case IDENTIDAD_DUPLICADA -> JOptionPane.showMessageDialog(this,
+                        "El DNI o nombre ya se encuentra registrado en la red de albergues.",
+                        "Identidad Duplicada", JOptionPane.ERROR_MESSAGE);
                 case ALBERGUE_NO_ENCONTRADO -> JOptionPane.showMessageDialog(this,
                         "Albergue no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
                 case SIN_CUPO -> ofrecerDerivacionInteractiva(nuevo, idAlb);
@@ -625,12 +626,12 @@ public class VentanaPrincipal extends JFrame {
     private void ejecutarDerivacion() {
         String idOrigen = obtenerIdDeCombo(cmbAlbergueOrigen);
         String idDestino = obtenerIdDeCombo(cmbAlbergueDestino);
-        String dni = txtDniDerivar.getText().trim();
-        if (!Damnificado.esDniValido(dni)) {
-            JOptionPane.showMessageDialog(this, "Ingrese un DNI válido de 8 dígitos.", "Error", JOptionPane.ERROR_MESSAGE);
+        String id = txtDniDerivar.getText().trim().toUpperCase();
+        if (!id.matches("[A-Z0-9]{3,}-\\d{5}")) {
+            JOptionPane.showMessageDialog(this, "Ingrese un código válido, por ejemplo SANMI-00001.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        ResultadoDerivacion r = albergueService.derivarDamnificado(idOrigen, idDestino, dni);
+        ResultadoDerivacion r = albergueService.derivarDamnificado(idOrigen, idDestino, id);
         switch (r) {
             case DERIVADO -> {
                 refrescarTodo();
@@ -638,7 +639,7 @@ public class VentanaPrincipal extends JFrame {
                 JOptionPane.showMessageDialog(this, "Damnificado trasladado con éxito a " + idDestino + ".");
             }
             case MISMO_ALBERGUE -> JOptionPane.showMessageDialog(this, "El origen y el destino no pueden ser el mismo albergue.", "Aviso", JOptionPane.WARNING_MESSAGE);
-            case DAMNIFICADO_NO_ENCONTRADO -> JOptionPane.showMessageDialog(this, "Ese DNI no está alojado en el albergue de origen.", "Error", JOptionPane.ERROR_MESSAGE);
+            case DAMNIFICADO_NO_ENCONTRADO -> JOptionPane.showMessageDialog(this, "Ese ID no está alojado en el albergue de origen.", "Error", JOptionPane.ERROR_MESSAGE);
             case DESTINO_SIN_CUPO -> JOptionPane.showMessageDialog(this, "El albergue de destino no tiene cupos libres.", "Sin Cupo", JOptionPane.WARNING_MESSAGE);
             default -> JOptionPane.showMessageDialog(this, "No se pudo derivar: " + r, "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -646,17 +647,17 @@ public class VentanaPrincipal extends JFrame {
 
     private void ejecutarSalidaVoluntaria() {
         String idAlb = obtenerIdDeCombo(cmbAlbergueSalida);
-        String dni = txtDniSalida.getText().trim();
-        if (!Damnificado.esDniValido(dni)) {
-            JOptionPane.showMessageDialog(this, "Ingrese un DNI válido de 8 dígitos.", "Error", JOptionPane.ERROR_MESSAGE);
+        String id = txtDniSalida.getText().trim().toUpperCase();
+        if (!id.matches("[A-Z0-9]{3,}-\\d{5}")) {
+            JOptionPane.showMessageDialog(this, "Ingrese un código válido, por ejemplo SANMI-00001.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        if (albergueService.registrarSalida(idAlb, dni)) {
+        if (albergueService.registrarSalida(idAlb, id)) {
             refrescarTodo();
             txtDniSalida.setText("");
             JOptionPane.showMessageDialog(this, "Salida voluntaria registrada. El cupo fue liberado.");
         } else {
-            JOptionPane.showMessageDialog(this, "Ese DNI no se encuentra alojado en el albergue seleccionado.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Ese ID no se encuentra alojado en el albergue seleccionado.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -890,7 +891,7 @@ public class VentanaPrincipal extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(8, 8));
         panel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        String[] cols = {"Fecha y Hora", "Albergue", "DNI", "Damnificado", "Recurso", "Cantidad", "Unidad"};
+        String[] cols = {"Fecha y Hora", "Albergue", "ID", "DNI", "Damnificado", "Recurso", "Cantidad", "Unidad"};
         modeloTablaHistorial = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -1129,6 +1130,7 @@ public class VentanaPrincipal extends JFrame {
             modeloTablaHistorial.addRow(new Object[]{
                     r.getFechaHora().format(FMT_FECHA_HORA),
                     r.getIdAlbergue(),
+                    r.getIdDamnificado(),
                     r.getDni(),
                     r.getNombreDamnificado(),
                     r.getRecurso(),

@@ -264,11 +264,6 @@ public class Main{
         }
 
         String dni = leerDni("Ingrese DNI (8 digitos): ");
-        Optional<Albergue> yaAlojado = albergueService.ubicarDamnificado(dni);
-        if (yaAlojado.isPresent()) {
-            System.out.println("Ese DNI ya esta registrado en el albergue " + yaAlojado.get().getNombre() + ".");
-            return;
-        }
         String nombre = leerTextoNoVacio("Ingrese Nombre Completo: ");
         int edad = leerEnteroEnRango("Ingrese Edad: ", 0, Damnificado.EDAD_MAXIMA);
         boolean atencionMedica = leerSiNo("¿Requiere atencion medica inmediata? (s/n): ");
@@ -307,7 +302,7 @@ public class Main{
         ResultadoIngreso resultado = albergueService.registrarIngreso(idAlbergue, nuevoDamnificado);
         switch (resultado) {
             case INGRESADO -> imprimirIngreso(nuevoDamnificado, idAlbergue);
-            case DNI_DUPLICADO -> System.out.println("Ese DNI ya esta registrado en la red.");
+            case IDENTIDAD_DUPLICADA -> System.out.println("El DNI o nombre ya esta registrado en la red.");
             case ALBERGUE_NO_ENCONTRADO -> System.out.println("Albergue no encontrado.");
             case SIN_CUPO -> ofrecerDerivacionPorFaltaDeCupo(nuevoDamnificado, idAlbergue);
         }
@@ -349,7 +344,7 @@ public class Main{
     private static void derivarDamnificado() {
         System.out.println("\n--- DERIVAR DAMNIFICADO A OTRO ALBERGUE ---");
         String origen = leerTextoNoVacio("ID del albergue de origen: ");
-        String dni = leerDni("DNI del damnificado (8 digitos): ");
+        String idDamnificado = leerIdDamnificado("Código del damnificado (ej. SANMI-00001): ");
         List<Albergue> alternativas = albergueService.consultarDisponibilidad(origen);
         if (alternativas.isEmpty()) {
             System.out.println("No hay otros albergues con cupo disponible.");
@@ -359,14 +354,14 @@ public class Main{
         alternativas.forEach(a -> System.out.println("  " + a));
         String destino = leerTextoNoVacio("ID del albergue destino: ");
 
-        ResultadoDerivacion r = albergueService.derivarDamnificado(origen, destino, dni);
+        ResultadoDerivacion r = albergueService.derivarDamnificado(origen, destino, idDamnificado);
         switch (r) {
             case DERIVADO -> System.out.println("Damnificado derivado con exito a "
                     + albergueService.buscarPorId(destino).map(Albergue::getNombre).orElse(destino) + ".");
             case ORIGEN_NO_ENCONTRADO -> System.out.println("El albergue de origen no existe.");
             case DESTINO_NO_ENCONTRADO -> System.out.println("El albergue de destino no existe.");
             case MISMO_ALBERGUE -> System.out.println("El origen y el destino son el mismo albergue.");
-            case DAMNIFICADO_NO_ENCONTRADO -> System.out.println("Ese DNI no esta alojado en el albergue de origen.");
+            case DAMNIFICADO_NO_ENCONTRADO -> System.out.println("Ese ID no esta alojado en el albergue de origen.");
             case DESTINO_SIN_CUPO -> System.out.println("El albergue de destino no tiene cupo.");
         }
     }
@@ -374,13 +369,13 @@ public class Main{
     private static void registrarSalida() {
         System.out.println("\n--- REGISTRAR SALIDA VOLUNTARIA ---");
         String idAlbergue = leerTextoNoVacio("ID del albergue: ");
-        String dni = leerDni("DNI del damnificado (8 digitos): ");
+        String idDamnificado = leerIdDamnificado("Código del damnificado (ej. SANMI-00001): ");
         if (albergueService.buscarPorId(idAlbergue).isEmpty()) {
             System.out.println("Albergue no encontrado.");
-        } else if (albergueService.registrarSalida(idAlbergue, dni)) {
+        } else if (albergueService.registrarSalida(idAlbergue, idDamnificado)) {
             System.out.println("Salida registrada. El cupo fue liberado.");
         } else {
-            System.out.println("Ese DNI no esta alojado en el albergue indicado.");
+            System.out.println("Ese ID no esta alojado en el albergue indicado.");
         }
     }
 
@@ -672,6 +667,16 @@ public class Main{
             } catch (NumberFormatException e) {
                 System.out.print("Ingrese un numero valido. ");
             }
+        }
+    }
+
+    private static String leerIdDamnificado(String mensaje) {
+        while (true) {
+            String texto = leerTexto(mensaje);
+            if (texto.matches("[A-Z0-9]{3,}-\\d{5}")) {
+                return texto.toUpperCase();
+            }
+            System.out.print("El código debe tener formato PREFIJO-00000, por ejemplo SANMI-00001. ");
         }
     }
 
