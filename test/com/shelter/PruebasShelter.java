@@ -611,6 +611,51 @@ public class PruebasShelter {
             verificar(r.verdes() + r.amarillos() + r.rojos() == 2, "suma de estados");
         });
 
+        prueba("la vista previa del reparto coincide con el reparto real y no toca el stock", () -> {
+            AlbergueService s = servicioConDosAlbergues();
+            s.registrarIngreso("A2", general(30));
+            s.registrarIngreso("A2", general(70));
+            Albergue a2 = s.buscarPorId("A2").get();
+            Recurso pan = new Recurso(TipoRecurso.ALIMENTO, "Pan", "u", 5, null);
+            s.registrarRecurso("A2", pan);
+            AsignacionRecurso asig = new AsignacionRecurso(s);
+            List<AsignacionRecurso.EntregaPlanificada> plan = asig.previsualizar(a2, pan, 3, 2);
+            verificar(pan.getCantidadDisponible() == 5 && asig.getHistorial().isEmpty(), "la vista previa no modifica nada");
+            List<RegistroAsignacion> hechas = asig.asignar(a2, pan, 3, 2);
+            verificar(plan.size() == hechas.size(), "mismo número de entregas");
+            for (int i = 0; i < plan.size(); i++) {
+                verificar(plan.get(i).damnificado().getId().equals(hechas.get(i).getIdDamnificado())
+                        && plan.get(i).cantidad() == hechas.get(i).getCantidad(), "misma persona y cantidad");
+            }
+        });
+
+        prueba("deshacer el último reparto devuelve el stock y borra sus constancias", () -> {
+            AlbergueService s = servicioConDosAlbergues();
+            s.registrarIngreso("A2", general(30));
+            Albergue a2 = s.buscarPorId("A2").get();
+            Recurso agua = agua(40);
+            s.registrarRecurso("A2", agua);
+            AsignacionRecurso asig = new AsignacionRecurso(s);
+            verificar(!asig.puedeDeshacerUltimoReparto(), "sin repartos no hay nada que deshacer");
+            asig.asignar(a2, agua, 15, 15);
+            verificar(agua.getCantidadDisponible() == 25 && asig.getHistorial().size() == 1, "reparto hecho");
+            verificar(asig.puedeDeshacerUltimoReparto(), "se puede deshacer");
+            double devuelto = asig.deshacerUltimoReparto();
+            verificar(devuelto == 15 && agua.getCantidadDisponible() == 40, "stock restaurado");
+            verificar(asig.getHistorial().isEmpty() && !asig.puedeDeshacerUltimoReparto(), "constancias retiradas, una sola vez");
+            esperarExcepcion(asig::deshacerUltimoReparto, "no se deshace dos veces");
+        });
+
+        prueba("la alerta de recurso faltante indica qué recurso falta", () -> {
+            AlbergueService s = servicioConDosAlbergues();
+            s.registrarIngreso("A1", general(30));
+            List<Alerta> alertas = s.evaluarRecursos(s.buscarPorId("A1").get());
+            verificar(alertas.stream().anyMatch(a -> a.recurso() == TipoRecurso.ALIMENTO), "ALIMENTO");
+            verificar(alertas.stream().anyMatch(a -> a.recurso() == TipoRecurso.MEDICINA), "MEDICINA");
+            verificar(s.validarMinimosSphere(s.buscarPorId("A1").get()).stream()
+                    .anyMatch(a -> a.codigo().equals("AGUA") && a.recurso() == TipoRecurso.AGUA), "AGUA");
+        });
+
         System.out.println("\n[Rendimiento (RNF-02)]");
         prueba("calcular prioridad y repartir con 2000 ocupantes tarda menos de 5 s", () -> {
             AlbergueService s = new AlbergueService();

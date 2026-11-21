@@ -3,124 +3,76 @@ package com.shelter.ui.componentes;
 import com.shelter.model.TipoRecurso;
 import com.shelter.ui.tema.Tema;
 
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JComponent;
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.GradientPaint;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import java.awt.Component;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RadialGradientPaint;
-import java.awt.RenderingHints;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.RoundRectangle2D;
 
 /**
- * Mosaico de un tipo de recurso: icono, nombre, stock vigente y una línea de estado,
- * todo con la paleta propia del recurso. Si el recurso es crítico y falta, el borde se vuelve rojo.
+ * Columna de un recurso dentro de la fila de inventario: nombre, cantidad y detalle.
+ *
+ * Antes cada recurso era una tarjeta con borde de color, icono en círculo y un rombo de "crítico";
+ * cinco tarjetas idénticas competían por la atención. Ahora es texto alineado en una sola fila,
+ * y el único color aparece cuando el recurso falta (rojo), que es lo que hay que ver.
  */
-public class TarjetaRecurso extends JComponent {
+public class TarjetaRecurso extends JPanel {
 
     private static final long serialVersionUID = 1L;
 
     private final TipoRecurso tipo;
-    private String cifra = "—";
-    private String detalle = "";
-    private boolean enAlerta;
+    private final JLabel lblNombre = new JLabel();
+    private final JLabel lblCifra = new JLabel("—");
+    private final JLabel lblDetalle = new JLabel(" ");
+    private boolean separador;
 
     public TarjetaRecurso(TipoRecurso tipo) {
         this.tipo = tipo;
         setOpaque(false);
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setBorder(BorderFactory.createEmptyBorder(2, 16, 2, 12));
+        lblNombre.setText(Tema.paleta(tipo).nombre());
+        lblNombre.setFont(Tema.TEXTO_NORMAL);
+        lblNombre.setForeground(Tema.TEXTO_SUAVE);
+        lblCifra.setFont(Tema.TITULO);
+        lblCifra.setForeground(Tema.TEXTO);
+        lblDetalle.setFont(Tema.TEXTO_PEQUENO);
+        lblDetalle.setForeground(Tema.TEXTO_SUAVE);
+        for (JComponent c : new JComponent[]{lblNombre, lblCifra, lblDetalle}) {
+            c.setAlignmentX(Component.LEFT_ALIGNMENT);
+        }
+        add(lblNombre);
+        add(Box.createVerticalStrut(4));
+        add(lblCifra);
+        add(Box.createVerticalStrut(2));
+        add(lblDetalle);
+    }
+
+    /** Dibuja una línea divisoria a la izquierda (para todas las columnas menos la primera). */
+    public void setSeparador(boolean separador) {
+        this.separador = separador;
     }
 
     public void setDatos(String cifra, String detalle, boolean enAlerta) {
-        this.cifra = cifra;
-        this.detalle = detalle;
-        this.enAlerta = enAlerta;
-        setToolTipText(Tema.paleta(tipo).nombre() + ": " + cifra + " · " + detalle);
-        repaint();
-    }
-
-    @Override
-    public Dimension getPreferredSize() {
-        return new Dimension(170, 86);
-    }
-
-    @Override
-    public Dimension getMinimumSize() {
-        return new Dimension(120, 80);
+        lblCifra.setText(cifra);
+        lblDetalle.setText(detalle == null || detalle.isEmpty() ? " " : detalle);
+        // Solo el estado lleva color: un recurso que falta se lee en rojo
+        lblCifra.setForeground(enAlerta ? Tema.ROJO : Tema.TEXTO);
+        lblDetalle.setForeground(enAlerta ? Tema.mezclar(Tema.ROJO, java.awt.Color.WHITE, 0.2) : Tema.TEXTO_SUAVE);
+        String descripcion = Tema.paleta(tipo).nombre() + ": " + cifra + ", " + detalle + (enAlerta ? ", en alerta" : "");
+        setToolTipText(descripcion);
+        getAccessibleContext().setAccessibleName(descripcion);
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        Tema.PaletaRecurso p = Tema.paleta(tipo);
-        int w = getWidth() - 1;
-        int h = getHeight() - 1;
-        RoundRectangle2D forma = new RoundRectangle2D.Double(0, 0, w, h, 16, 16);
-
-        g2.setPaint(new GradientPaint(0, 0, Tema.mezclar(Tema.SUPERFICIE_ALTA, p.principal(), 0.16), w, h, Tema.SUPERFICIE));
-        g2.fill(forma);
-        // Franja lateral con los dos colores de la paleta
-        g2.setClip(forma);
-        g2.setPaint(new GradientPaint(0, 0, p.secundario(), 0, h, p.principal()));
-        g2.fillRect(0, 0, 5, h);
-        g2.setClip(null);
-        g2.setStroke(new BasicStroke(enAlerta ? 1.8f : 1f));
-        g2.setColor(enAlerta ? Tema.ROJO : Tema.alfa(p.principal(), 90));
-        g2.draw(forma);
-
-        // Icono dentro de un círculo con halo
-        int s = 38;
-        int ix = 16;
-        int iy = (h - s) / 2;
-        g2.setPaint(new RadialGradientPaint(new Point2D.Double(ix + s / 2.0, iy + s / 2.0), s * 0.75f,
-                new float[]{0f, 1f}, new Color[]{Tema.alfa(p.principal(), 90), Tema.alfa(p.principal(), 0)}));
-        g2.fill(new Ellipse2D.Double(ix - 8, iy - 8, s + 16, s + 16));
-        g2.setColor(Tema.alfa(p.principal(), 50));
-        g2.fill(new Ellipse2D.Double(ix, iy, s, s));
-        Iconos.dibujar(g2, Iconos.figura(tipo), ix + 8, iy + 8, s - 16, p.principal(), p.secundario());
-
-        // Textos
-        int tx = ix + s + 12;
-        int anchoTexto = w - tx - 8;
-        g2.setFont(Tema.fuente(Font.BOLD, 11));
-        g2.setColor(Tema.mezclar(p.principal(), Color.WHITE, 0.4));
-        g2.drawString(recortar(g2, p.nombre().toUpperCase(), anchoTexto), tx, h / 2 - 14);
-        if (tipo.esCritico()) {
-            // Marca de recurso crítico: pequeño rombo en la esquina superior derecha
-            g2.setColor(enAlerta ? Tema.ROJO : Tema.alfa(p.secundario(), 170));
-            java.awt.geom.Path2D rombo = new java.awt.geom.Path2D.Double();
-            rombo.moveTo(w - 14, 8);
-            rombo.lineTo(w - 9, 13);
-            rombo.lineTo(w - 14, 18);
-            rombo.lineTo(w - 19, 13);
-            rombo.closePath();
-            g2.fill(rombo);
+        super.paintComponent(g);
+        if (separador) {
+            g.setColor(Tema.BORDE_SUAVE);
+            g.drawLine(0, 4, 0, getHeight() - 4);
         }
-        g2.setFont(Tema.fuente(Font.BOLD, 18));
-        g2.setColor(Tema.TEXTO);
-        g2.drawString(recortar(g2, cifra, anchoTexto), tx, h / 2 + 6);
-        g2.setFont(Tema.TEXTO_PEQUENO);
-        g2.setColor(enAlerta ? Tema.mezclar(Tema.ROJO, Color.WHITE, 0.3) : Tema.TEXTO_SUAVE);
-        g2.drawString(recortar(g2, detalle, anchoTexto), tx, h / 2 + 24);
-        g2.dispose();
-    }
-
-    private static String recortar(Graphics2D g2, String texto, int ancho) {
-        FontMetrics fm = g2.getFontMetrics();
-        if (texto == null || fm.stringWidth(texto) <= ancho) {
-            return texto == null ? "" : texto;
-        }
-        String t = texto;
-        while (t.length() > 1 && fm.stringWidth(t + "…") > ancho) {
-            t = t.substring(0, t.length() - 1);
-        }
-        return t + "…";
     }
 }

@@ -164,9 +164,26 @@ public class ShelterController {
         return entregas;
     }
 
+    /** Deshace el último reparto de la sesión. Devuelve la cantidad que volvió al stock. */
+    public double deshacerUltimoReparto() {
+        double devuelto = asignacion.deshacerUltimoReparto();
+        notificar();
+        return devuelto;
+    }
+
     // =========================================================
     // CONSULTAS (no modifican nada)
     // =========================================================
+
+    /** Lo que haría un reparto, sin ejecutarlo: para confirmar antes de descontar stock. */
+    public List<AsignacionRecurso.EntregaPlanificada> previsualizarReparto(Albergue albergue, Recurso recurso,
+                                                                           double total, double porPersona) {
+        return asignacion.previsualizar(albergue, recurso, total, porPersona);
+    }
+
+    public boolean puedeDeshacerReparto() {
+        return asignacion.puedeDeshacerUltimoReparto();
+    }
 
     public List<Albergue> getAlbergues() {
         return albergueService.obtenerPanelSemaforo();

@@ -31,7 +31,11 @@ public class BotonModerno extends JButton {
     private boolean presionado;
 
     public BotonModerno(String texto, Estilo estilo) {
-        this(texto, estilo, estilo == Estilo.PELIGRO ? Tema.ROJO : Tema.ACENTO_OSCURO);
+        this(texto, estilo, estilo == Estilo.PELIGRO ? Tema.ROJO_BOTON : Tema.ACENTO_OSCURO);
+    }
+
+    private static boolean esClaro(Color c) {
+        return (0.2126 * c.getRed() + 0.7152 * c.getGreen() + 0.0722 * c.getBlue()) > 150;
     }
 
     public BotonModerno(String texto, Estilo estilo, Color color) {
@@ -39,12 +43,25 @@ public class BotonModerno extends JButton {
         this.estilo = estilo;
         this.color = color;
         setFont(Tema.TEXTO_NEGRITA);
-        setForeground(estilo == Estilo.SECUNDARIO ? Tema.TEXTO : Color.WHITE);
+        // Texto oscuro sobre fondos claros (la acción principal) y blanco sobre oscuros (peligro)
+        setForeground(estilo == Estilo.SECUNDARIO ? Tema.TEXTO : (esClaro(color) ? Tema.TINTA_ACCION : Color.WHITE));
         setContentAreaFilled(false);
         setBorderPainted(false);
         setFocusPainted(false);
         setOpaque(false);
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        // El foco de teclado se dibuja a mano (ver paintComponent), así que hay que repintar al cambiar
+        addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                repaint();
+            }
+
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                repaint();
+            }
+        });
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -96,24 +113,28 @@ public class BotonModerno extends JButton {
         boolean activo = isEnabled();
 
         if (estilo == Estilo.SECUNDARIO) {
-            Color fondo = encima && activo ? Tema.alfa(Tema.ACENTO, presionado ? 50 : 30) : Tema.alfa(Color.WHITE, 6);
+            Color fondo = encima && activo ? Tema.alfa(Color.WHITE, presionado ? 22 : 12) : Tema.alfa(Color.WHITE, 4);
             g2.setColor(fondo);
             g2.fillRoundRect(0, 0, w - 1, h - 1, arco, arco);
-            g2.setColor(encima && activo ? Tema.ACENTO : Tema.BORDE);
+            g2.setColor(encima && activo ? Tema.TEXTO_SUAVE : Tema.BORDE);
             g2.drawRoundRect(0, 0, w - 1, h - 1, arco, arco);
         } else {
+            // Relleno plano (sin degradado): la jerarquía la da el contraste, no el brillo
             Color base = activo ? color : Tema.BORDE;
             if (presionado) {
-                base = Tema.mezclar(base, Color.BLACK, 0.2);
+                base = Tema.mezclar(base, Color.BLACK, 0.18);
             } else if (encima && activo) {
-                base = Tema.mezclar(base, Color.WHITE, 0.15);
+                base = esClaro(base) ? Tema.mezclar(base, Color.WHITE, 0.5) : Tema.mezclar(base, Color.WHITE, 0.12);
             }
-            g2.setPaint(new GradientPaint(0, 0, Tema.mezclar(base, Color.WHITE, 0.12), 0, h, base));
+            g2.setColor(base);
             g2.fillRoundRect(0, 0, w - 1, h - 1, arco, arco);
-            if (encima && activo) {
-                g2.setColor(Tema.alfa(color, 90));
-                g2.drawRoundRect(0, 0, w - 1, h - 1, arco, arco);
-            }
+        }
+
+        // Anillo de foco visible para quien navega con teclado (separado del botón por un hueco)
+        if (isFocusOwner() && activo) {
+            g2.setStroke(new java.awt.BasicStroke(2f));
+            g2.setColor(estilo == Estilo.SECUNDARIO ? Tema.TEXTO : (esClaro(color) ? Tema.TINTA_ACCION : Color.WHITE));
+            g2.drawRoundRect(3, 3, w - 7, h - 7, arco - 4, arco - 4);
         }
 
         // Icono + texto centrados

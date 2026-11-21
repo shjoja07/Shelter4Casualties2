@@ -47,35 +47,73 @@ public final class Renderizadores {
         if (seleccionada) {
             return Tema.SELECCION;
         }
-        return fila % 2 == 0 ? Tema.SUPERFICIE : new Color(0x121C2E);
+        return fila % 2 == 0 ? Tema.SUPERFICIE : Tema.FILA_ALTERNA;
     }
 
     // =========================================================
     // CHIP: etiqueta en forma de píldora con punto luminoso
     // =========================================================
 
-    /** Etiqueta en forma de píldora; opcionalmente con un punto que "brilla". */
+    /**
+     * Indicador de estado. Con fondo es una pastilla (para lo que exige atención: rojo, ámbar,
+     * prioridad urgente); sin fondo es texto simple con un punto opcional (para lo que está bien).
+     * Así la pastilla de color vuelve a significar "mira esto", en lugar de decorar cada celda.
+     */
     public static class Chip extends JComponent {
         private static final long serialVersionUID = 1L;
         private String texto = "";
         private Color color = Tema.ACENTO;
         private boolean punto = true;
+        private boolean fondo = true;
         private int alineacion = SwingConstants.LEFT;
 
         public Chip() {
-            setFont(Tema.fuente(Font.BOLD, 11));
+            setFont(Tema.ETIQUETA);
         }
 
+        /** Pastilla de color: solo para estados que requieren atención. */
         public Chip configurar(String texto, Color color, boolean punto) {
+            return configurar(texto, color, punto, true);
+        }
+
+        public Chip configurar(String texto, Color color, boolean punto, boolean fondo) {
             this.texto = texto == null ? "" : texto;
             this.color = color;
             this.punto = punto;
+            this.fondo = fondo;
+            revalidate(); // el ancho depende del texto: el contenedor debe recalcular su distribución
             repaint();
             return this;
         }
 
+        /** Texto simple, sin pastilla: el estado está bien o el dato no es un estado. */
+        public Chip texto(String texto, Color colorPunto) {
+            return configurar(texto, colorPunto, colorPunto != null, false);
+        }
+
         public void setAlineacion(int alineacion) {
             this.alineacion = alineacion;
+        }
+
+        /** El texto del chip está dibujado: se expone como etiqueta para los lectores de pantalla. */
+        @Override
+        public javax.accessibility.AccessibleContext getAccessibleContext() {
+            if (accessibleContext == null) {
+                accessibleContext = new AccessibleJComponent() {
+                    private static final long serialVersionUID = 1L;
+
+                    @Override
+                    public javax.accessibility.AccessibleRole getAccessibleRole() {
+                        return javax.accessibility.AccessibleRole.LABEL;
+                    }
+
+                    @Override
+                    public String getAccessibleName() {
+                        return texto;
+                    }
+                };
+            }
+            return accessibleContext;
         }
 
         @Override
@@ -100,22 +138,25 @@ public final class Renderizadores {
                 default -> 6;
             };
             int y = (getHeight() - alto) / 2;
-            g2.setColor(Tema.alfa(color, 38));
-            g2.fill(new RoundRectangle2D.Double(x, y, ancho, alto, alto, alto));
-            g2.setColor(Tema.alfa(color, 110));
-            g2.draw(new RoundRectangle2D.Double(x + 0.5, y + 0.5, ancho - 1, alto - 1, alto, alto));
-            int tx = x + 9;
-            if (punto) {
+            if (fondo) {
+                g2.setColor(Tema.alfa(color, 40));
+                g2.fill(new RoundRectangle2D.Double(x, y, ancho, alto, alto, alto));
+                g2.setColor(Tema.alfa(color, 120));
+                g2.draw(new RoundRectangle2D.Double(x + 0.5, y + 0.5, ancho - 1, alto - 1, alto, alto));
+            } else {
+                x -= 6; // sin pastilla el texto se alinea con el resto de la columna
+            }
+            int tx = x + (fondo ? 9 : 6);
+            if (punto && color != null) {
                 double cx = x + 12;
                 double cy = y + alto / 2.0;
-                g2.setPaint(new RadialGradientPaint(new Point2D.Double(cx, cy), 7f, new float[]{0f, 1f},
-                        new Color[]{Tema.alfa(color, 160), Tema.alfa(color, 0)}));
-                g2.fill(new Ellipse2D.Double(cx - 7, cy - 7, 14, 14));
                 g2.setColor(color);
                 g2.fill(new Ellipse2D.Double(cx - 3.5, cy - 3.5, 7, 7));
                 tx = x + 20;
             }
-            g2.setColor(Tema.mezclar(color, Color.WHITE, 0.45));
+            g2.setFont(fondo ? getFont() : Tema.TEXTO_NORMAL);
+            fm = g2.getFontMetrics();
+            g2.setColor(fondo ? Tema.mezclar(color, Color.WHITE, 0.45) : Tema.TEXTO_SUAVE);
             g2.drawString(texto, tx, y + (alto - fm.getHeight()) / 2 + fm.getAscent());
             g2.dispose();
         }
@@ -142,7 +183,7 @@ public final class Renderizadores {
         public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int c) {
             JLabel l = (JLabel) super.getTableCellRendererComponent(t, v, false, false, r, c);
             l.setText(v == null ? "" : v.toString().toUpperCase());
-            l.setFont(Tema.fuente(Font.BOLD, 11));
+            l.setFont(Tema.ETIQUETA);
             l.setForeground(Tema.TEXTO_SUAVE);
             l.setBackground(Tema.FONDO_LATERAL);
             l.setOpaque(true);
@@ -184,7 +225,12 @@ public final class Renderizadores {
         @Override
         public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int c) {
             if (v instanceof NivelSemaforo n) {
-                chip.configurar(n.getEtiqueta(), Tema.color(n), true);
+                // Verde = todo en orden: texto con su punto, sin pastilla. Ámbar y rojo sí la llevan.
+                if (n == NivelSemaforo.VERDE) {
+                    chip.texto(n.getEtiqueta(), Tema.VERDE);
+                } else {
+                    chip.configurar(n.getEtiqueta(), Tema.color(n), true);
+                }
             } else {
                 chip.configurar("", Tema.BORDE, false);
             }
@@ -192,14 +238,18 @@ public final class Renderizadores {
         }
     }
 
-    /** Prioridad de un damnificado como chip de color. */
+    /** Prioridad: pastilla solo si es urgente (crítica o alta); media y baja van como texto. */
     public static class PrioridadCelda implements TableCellRenderer {
         private final Chip chip = new Chip();
 
         @Override
         public Component getTableCellRendererComponent(JTable t, Object v, boolean s, boolean f, int r, int c) {
             if (v instanceof NivelPrioridad n) {
-                chip.configurar(n.getEtiqueta(), Tema.color(n), true);
+                if (Tema.esUrgente(n)) {
+                    chip.configurar(n.getEtiqueta(), Tema.color(n), true);
+                } else {
+                    chip.texto(n.getEtiqueta(), null);
+                }
             }
             return celda(chip, fondoFila(t, r, s));
         }
@@ -249,13 +299,22 @@ public final class Renderizadores {
      * Lista que siempre ocupa el ancho visible (sin barra horizontal) y recalcula la altura de sus
      * filas al cambiar de tamaño, para que los textos largos se ajusten en varias líneas.
      */
-    public static <T> JList<T> lista(javax.swing.ListModel<T> modelo, ListCellRenderer<? super T> renderer) {
+    public static <T> JList<T> lista(javax.swing.ListModel<T> modelo, ListCellRenderer<? super T> renderer,
+                                     java.util.function.Supplier<String> textoVacio) {
         JList<T> lista = new JList<>(modelo) {
             private static final long serialVersionUID = 1L;
 
             @Override
             public boolean getScrollableTracksViewportWidth() {
                 return true;
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (getModel().getSize() == 0) {
+                    pintarVacio(this, g, textoVacio.get());
+                }
             }
         };
         lista.setCellRenderer(renderer);
@@ -270,35 +329,52 @@ public final class Renderizadores {
         return lista;
     }
 
-    /** Alerta: chip con el código y la gravedad, y debajo el mensaje completo ajustado al ancho. */
-    public static class AlertaLista implements ListCellRenderer<Alerta> {
-        private final JPanel panel = new JPanel(new BorderLayout(0, 4));
-        private final Chip chip = new Chip();
-        private final JLabel texto = new JLabel();
+    /** Tabla que, sin filas, explica por qué está vacía y qué hacer. */
+    public static JTable tabla(javax.swing.table.TableModel modelo, java.util.function.Supplier<String> textoVacio) {
+        return new JTable(modelo) {
+            private static final long serialVersionUID = 1L;
 
-        public AlertaLista() {
-            panel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, Tema.BORDE_SUAVE),
-                    BorderFactory.createEmptyBorder(7, 2, 8, 6)));
-            texto.setFont(Tema.TEXTO_NORMAL);
-            texto.setForeground(Tema.TEXTO);
-            texto.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
-            JPanel fila = new JPanel(new BorderLayout());
-            fila.setOpaque(false);
-            fila.add(chip, BorderLayout.WEST);
-            panel.add(fila, BorderLayout.NORTH);
-            panel.add(texto, BorderLayout.CENTER);
-        }
-
-        @Override
-        public Component getListCellRendererComponent(JList<? extends Alerta> l, Alerta a, int i, boolean s, boolean f) {
-            chip.configurar(a.gravedad().getEtiqueta() + " · " + a.codigo().replace('_', ' '), Tema.color(a.gravedad()), true);
-            int ancho = Math.max(140, l.getWidth() - 30);
-            texto.setText("<html><body style='width:" + ancho + "px'>" + escapar(a.mensaje()) + "</body></html>");
-            panel.setBackground(s ? Tema.SELECCION : Tema.SUPERFICIE);
-            return panel;
-        }
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (getRowCount() == 0) {
+                    pintarVacio(this, g, textoVacio.get());
+                }
+            }
+        };
     }
+
+    /** Mensaje centrado y ajustado al ancho para un contenedor vacío. */
+    private static void pintarVacio(JComponent c, Graphics g, String texto) {
+        if (texto == null || texto.isBlank()) {
+            return;
+        }
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2.setFont(Tema.TEXTO_NORMAL);
+        g2.setColor(Tema.TEXTO_SUAVE);
+        FontMetrics fm = g2.getFontMetrics();
+        int ancho = Math.max(120, c.getWidth() - 48);
+        java.util.List<String> lineas = new java.util.ArrayList<>();
+        StringBuilder linea = new StringBuilder();
+        for (String palabra : texto.split(" ")) {
+            String prueba = linea.length() == 0 ? palabra : linea + " " + palabra;
+            if (fm.stringWidth(prueba) > ancho && linea.length() > 0) {
+                lineas.add(linea.toString());
+                linea = new StringBuilder(palabra);
+            } else {
+                linea = new StringBuilder(prueba);
+            }
+        }
+        lineas.add(linea.toString());
+        int y = 28 + fm.getAscent();
+        for (String l : lineas) {
+            g2.drawString(l, (c.getWidth() - fm.stringWidth(l)) / 2, y);
+            y += fm.getHeight() + 2;
+        }
+        g2.dispose();
+    }
+
 
     /** Damnificado: código, nombre, tipo (texto de color) y chip de prioridad. */
     public static class DamnificadoLista implements ListCellRenderer<Damnificado> {
@@ -315,10 +391,6 @@ public final class Renderizadores {
             panel.add(chipPrioridad, BorderLayout.EAST);
         }
 
-        private static String hex(Color c) {
-            return String.format("#%02X%02X%02X", c.getRed(), c.getGreen(), c.getBlue());
-        }
-
         @Override
         public Component getListCellRendererComponent(JList<? extends Damnificado> l, Damnificado d, int i,
                                                       boolean s, boolean f) {
@@ -326,14 +398,19 @@ public final class Renderizadores {
                 izquierda.setText(" ");
                 chipPrioridad.configurar("", Tema.BORDE, false);
             } else {
-                String orden = numerado ? "<span style='color:#5E6F8A'>" + (i + 1) + ".</span>&nbsp;" : "";
-                izquierda.setText("<html>" + orden + "<span style='font-family:monospace;color:#38BDF8'><b>"
+                String orden = numerado ? "<span style='color:" + Tema.hex(Tema.TEXTO_TENUE) + "'>" + (i + 1) + ".</span>&nbsp;" : "";
+                izquierda.setText("<html>" + orden + "<span style='font-family:monospace;color:" + Tema.hex(Tema.TEXTO) + "'><b>"
                         + escapar(d.getId()) + "</b></span>&nbsp; " + escapar(d.getNombreCompleto())
-                        + "<br><span style='color:" + hex(Tema.colorTipo(d)) + "'>" + Tema.nombreTipo(d) + "</span>"
-                        + " <span style='color:#93A3BC'>· " + d.getEdad() + " años</span></html>");
-                chipPrioridad.configurar(d.getNivelPrioridad().getEtiqueta(), Tema.color(d.getNivelPrioridad()), true);
+                        + "<br><span style='color:" + Tema.hex(Tema.colorTipo(d)) + "'>" + Tema.nombreTipo(d) + "</span>"
+                        + " <span style='color:" + Tema.hex(Tema.TEXTO_SUAVE) + "'>· " + d.getEdad() + " años</span></html>");
+                NivelPrioridad np = d.getNivelPrioridad();
+                if (Tema.esUrgente(np)) {
+                    chipPrioridad.configurar(np.getEtiqueta(), Tema.color(np), true);
+                } else {
+                    chipPrioridad.texto(np.getEtiqueta(), null); // media y baja: texto, sin pastilla
+                }
             }
-            panel.setBackground(s ? Tema.SELECCION : (i % 2 == 0 ? Tema.SUPERFICIE : new Color(0x121C2E)));
+            panel.setBackground(s ? Tema.SELECCION : (i % 2 == 0 ? Tema.SUPERFICIE : Tema.FILA_ALTERNA));
             return panel;
         }
     }
@@ -367,6 +444,7 @@ public final class Renderizadores {
         public Component getListCellRendererComponent(JList<?> l, Object v, int i, boolean s, boolean f) {
             JLabel label = (JLabel) super.getListCellRendererComponent(l, v, i, s, f);
             label.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+            label.setFont(Tema.TEXTO_NORMAL);
             label.setBackground(s ? Tema.SELECCION : Tema.CAMPO);
             label.setForeground(Tema.TEXTO);
             return label;
@@ -379,6 +457,7 @@ public final class Renderizadores {
 
         public AlbergueCombo() {
             label.setOpaque(true);
+            label.setFont(Tema.TEXTO_NORMAL);
             label.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
         }
 
@@ -389,7 +468,8 @@ public final class Renderizadores {
                 label.setIcon(null);
             } else {
                 label.setIcon(new PuntoIcono(Tema.color(a.getEstadoSemaforo())));
-                label.setText(a.getId() + "  ·  " + a.getNombre() + "   (" + a.getCuposDisponibles() + " cupos)");
+                label.setText(a.getId() + "  ·  " + a.getNombre() + "  ·  " + a.getCuposDisponibles()
+                        + (a.getCuposDisponibles() == 1 ? " cupo libre" : " cupos libres"));
             }
             label.setBackground(s ? Tema.SELECCION : Tema.CAMPO);
             label.setForeground(Tema.TEXTO);
@@ -403,6 +483,7 @@ public final class Renderizadores {
 
         public DamnificadoCombo() {
             label.setOpaque(true);
+            label.setFont(Tema.TEXTO_NORMAL);
             label.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
         }
 
@@ -414,7 +495,8 @@ public final class Renderizadores {
                 label.setIcon(null);
             } else {
                 label.setIcon(new PuntoIcono(Tema.color(d.getNivelPrioridad())));
-                label.setText(d.getId() + "  ·  " + d.getNombreCompleto() + "  [" + d.getNivelPrioridad().getEtiqueta() + "]");
+                label.setText(d.getId() + "  ·  " + d.getNombreCompleto() + "  ·  prioridad "
+                        + d.getNivelPrioridad().getEtiqueta().toLowerCase());
             }
             label.setBackground(s ? Tema.SELECCION : Tema.CAMPO);
             label.setForeground(Tema.TEXTO);
@@ -428,6 +510,7 @@ public final class Renderizadores {
 
         public RecursoCombo() {
             label.setOpaque(true);
+            label.setFont(Tema.TEXTO_NORMAL);
             label.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
             label.setIconTextGap(8);
         }
@@ -439,8 +522,10 @@ public final class Renderizadores {
                 label.setIcon(null);
             } else {
                 label.setIcon(Iconos.recurso(r.getTipo(), 16));
-                String vence = r.getFechaVencimiento() == null ? "no vence" : "vence " + r.getFechaVencimiento();
-                label.setText(String.format("%s  ·  %.2f %s  (%s)", r.getNombre(), r.getCantidadDisponible(), r.getUnidad(), vence));
+                String vence = r.getFechaVencimiento() == null ? "no vence"
+                        : "vence " + r.getFechaVencimiento().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                label.setText(r.getNombre() + "  ·  " + Formatos.cantidad(r.getCantidadDisponible(), r.getUnidad())
+                        + "  ·  " + vence);
             }
             label.setBackground(s ? Tema.SELECCION : Tema.CAMPO);
             label.setForeground(Tema.TEXTO);
@@ -454,6 +539,7 @@ public final class Renderizadores {
 
         public TipoRecursoCombo() {
             label.setOpaque(true);
+            label.setFont(Tema.TEXTO_NORMAL);
             label.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
             label.setIconTextGap(8);
         }
@@ -477,10 +563,8 @@ public final class Renderizadores {
         public void paintIcon(Component c, Graphics g, int x, int y) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(Tema.alfa(color, 70));
-            g2.fill(new Ellipse2D.Double(x, y, 12, 12));
             g2.setColor(color);
-            g2.fill(new Ellipse2D.Double(x + 3, y + 3, 6, 6));
+            g2.fill(new Ellipse2D.Double(x + 2, y + 2, 8, 8));
             g2.dispose();
         }
 

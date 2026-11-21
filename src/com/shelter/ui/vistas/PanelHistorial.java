@@ -49,7 +49,10 @@ public class PanelHistorial extends JPanel {
         this.controller = controller;
         setOpaque(false);
 
-        JTable tabla = new JTable(modelo);
+        JTable tabla = Renderizadores.tabla(modelo,
+                () -> controller.historial().isEmpty()
+                        ? "Todavía no hay entregas. Ejecuta un reparto en la sección Recursos."
+                        : "Ninguna entrega coincide con la búsqueda.");
         Tema.estilizar(tabla);
         tabla.setAutoCreateRowSorter(true);
         tabla.setDefaultRenderer(Object.class, new Renderizadores.Texto());
@@ -68,12 +71,12 @@ public class PanelHistorial extends JPanel {
         buscar.add(new JLabel(Iconos.de(Iconos.Figura.LUPA, 16, Tema.TEXTO_SUAVE)));
         buscar.add(txtBuscar);
 
-        Tarjeta tarjetaTabla = new Tarjeta("Historial de entregas de recursos", new Color(0xF59E0B));
+        Tarjeta tarjetaTabla = new Tarjeta("Historial de entregas de recursos");
         tarjetaTabla.accionesTitulo(buscar);
         tarjetaTabla.contenido(Tema.scroll(tabla));
 
         BotonModerno btnGuardar = new BotonModerno("Guardar", BotonModerno.Estilo.PRIMARIO);
-        btnGuardar.setIcon(Iconos.de(Iconos.Figura.GUARDAR, 16, Color.WHITE));
+        btnGuardar.setIcon(Iconos.de(Iconos.Figura.GUARDAR, 16, Tema.TINTA_ACCION));
         btnGuardar.addActionListener(e -> guardar(ShelterController.RUTA_DATOS));
         BotonModerno btnExportar = new BotonModerno("Exportar como…", BotonModerno.Estilo.SECUNDARIO);
         btnExportar.addActionListener(e -> {
@@ -174,7 +177,7 @@ public class PanelHistorial extends JPanel {
                 case 3 -> r.getDni();
                 case 4 -> r.getNombreDamnificado();
                 case 5 -> r.getRecurso();
-                default -> String.format("%.2f %s", r.getCantidad(), r.getUnidad());
+                default -> com.shelter.ui.componentes.Formatos.cantidad(r.getCantidad(), r.getUnidad());
             };
         }
     }

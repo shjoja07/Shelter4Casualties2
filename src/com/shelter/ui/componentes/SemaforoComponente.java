@@ -64,6 +64,7 @@ public class SemaforoComponente extends JComponent {
         if (nuevo != nivel) {
             nivel = nuevo;
             setToolTipText("Estado semáforo: " + nivel.getEtiqueta());
+            getAccessibleContext().setAccessibleName("Semáforo: " + nivel.getEtiqueta());
             firePropertyChange("nivel", null, nuevo);
         }
         arrancar();
@@ -127,12 +128,29 @@ public class SemaforoComponente extends JComponent {
 
     @Override
     public Dimension getPreferredSize() {
-        return new Dimension(150, 360);
+        return isPreferredSizeSet() ? super.getPreferredSize() : new Dimension(150, 360);
     }
 
     @Override
     public Dimension getMinimumSize() {
-        return new Dimension(90, 220);
+        return isMinimumSizeSet() ? super.getMinimumSize() : new Dimension(50, 120);
+    }
+
+    /** Para lectores de pantalla el semáforo es una imagen con su estado como nombre. */
+    @Override
+    public javax.accessibility.AccessibleContext getAccessibleContext() {
+        if (accessibleContext == null) {
+            accessibleContext = new AccessibleJComponent() {
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                public javax.accessibility.AccessibleRole getAccessibleRole() {
+                    return javax.accessibility.AccessibleRole.ICON;
+                }
+            };
+            accessibleContext.setAccessibleName("Semáforo: " + nivel.getEtiqueta());
+        }
+        return accessibleContext;
     }
 
     // =========================================================
@@ -146,9 +164,11 @@ public class SemaforoComponente extends JComponent {
         g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         g2.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
 
-        // La carcasa mantiene proporción 1 : 2.5 y se centra en el espacio disponible
-        double margen = 18;
-        double altoDisp = getHeight() - 2 * margen - 26;  // 26 px para el soporte inferior
+        // La carcasa mantiene proporción 1 : 2.5 y se centra en el espacio disponible.
+        // Márgenes proporcionales: el mismo componente sirve grande o como indicador compacto.
+        double margen = Math.max(4, Math.min(18, getWidth() * 0.1));
+        double soporte = Math.min(26, getHeight() * 0.1);
+        double altoDisp = getHeight() - 2 * margen - soporte;
         double anchoDisp = getWidth() - 2 * margen;
         double ancho = Math.min(anchoDisp, altoDisp / 2.5);
         double alto = ancho * 2.5;
@@ -176,10 +196,13 @@ public class SemaforoComponente extends JComponent {
     private void dibujarSoporte(Graphics2D g2, double x, double y, double ancho, double alto) {
         double cx = x + ancho / 2;
         double base = y + alto;
-        g2.setPaint(new GradientPaint((float) (cx - 6), 0, new Color(0x2B3647), (float) (cx + 6), 0, new Color(0x161D29)));
-        g2.fill(new java.awt.geom.Rectangle2D.Double(cx - 6, base - 4, 12, 22));
-        g2.setPaint(new GradientPaint(0, (float) (base + 16), new Color(0x2B3647), 0, (float) (base + 26), new Color(0x10151E)));
-        g2.fill(new RoundRectangle2D.Double(cx - ancho * 0.32, base + 16, ancho * 0.64, 9, 8, 8));
+        double k = ancho / 100.0; // el soporte escala con la carcasa
+        double poste = Math.max(4, 12 * k);
+        double largo = Math.max(6, 22 * k);
+        g2.setPaint(new GradientPaint((float) (cx - poste / 2), 0, new Color(0x2B3647), (float) (cx + poste / 2), 0, new Color(0x161D29)));
+        g2.fill(new java.awt.geom.Rectangle2D.Double(cx - poste / 2, base - 4, poste, largo));
+        g2.setPaint(new GradientPaint(0, (float) (base + largo - 6), new Color(0x2B3647), 0, (float) (base + largo + 3), new Color(0x10151E)));
+        g2.fill(new RoundRectangle2D.Double(cx - ancho * 0.32, base + largo - 6, ancho * 0.64, Math.max(4, 9 * k), 8, 8));
     }
 
     private void dibujarSombra(Graphics2D g2, double x, double y, double ancho, double alto, double radio) {

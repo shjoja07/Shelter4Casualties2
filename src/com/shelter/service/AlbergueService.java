@@ -360,11 +360,11 @@ public class AlbergueService {
             if (litrosPorPersona < SphereConstantes.AGUA_LITROS_PERSONA_DIA_EMERGENCIA) {
                 alertas.add(new Alerta(NivelSemaforo.ROJO, "AGUA", String.format(Locale.US,
                         "Agua: %.1f L/persona, por debajo incluso del mínimo de emergencia (%.1f L/persona/día).",
-                        litrosPorPersona, SphereConstantes.AGUA_LITROS_PERSONA_DIA_EMERGENCIA)));
+                        litrosPorPersona, SphereConstantes.AGUA_LITROS_PERSONA_DIA_EMERGENCIA), TipoRecurso.AGUA));
             } else if (litrosPorPersona < SphereConstantes.AGUA_LITROS_PERSONA_DIA_MIN) {
                 alertas.add(new Alerta(NivelSemaforo.AMARILLO, "AGUA", String.format(Locale.US,
                         "Agua: %.1f L/persona, bajo el mínimo Sphere (%.1f L/persona/día).",
-                        litrosPorPersona, SphereConstantes.AGUA_LITROS_PERSONA_DIA_MIN)));
+                        litrosPorPersona, SphereConstantes.AGUA_LITROS_PERSONA_DIA_MIN), TipoRecurso.AGUA));
             }
         }
 
@@ -407,14 +407,16 @@ public class AlbergueService {
                 // mismo resultado.
                 if (tipo.esCritico() && tipo != TipoRecurso.AGUA && !albergue.tieneRecursoDisponible(tipo)) {
                     alertas.add(new Alerta(NivelSemaforo.ROJO, "RECURSO_FALTANTE",
-                            "Sin stock vigente del recurso crítico " + tipo + "."));
+                            "Sin stock vigente de " + tipo.name().toLowerCase(Locale.ROOT)
+                                    + ", un recurso crítico.", tipo));
                 }
             }
         }
         for (Recurso r : albergue.getRecursos()) {
             if (r.estaVencido(hoy) && r.getCantidadDisponible() > 0) {
                 alertas.add(new Alerta(NivelSemaforo.AMARILLO, "RECURSO_VENCIDO",
-                        "Lote vencido: " + r.getNombre() + " (" + r.getCantidadDisponible() + " " + r.getUnidad() + ")."));
+                        "Lote vencido: " + r.getNombre() + " (" + r.getCantidadDisponible() + " " + r.getUnidad() + ").",
+                        r.getTipo()));
             }
         }
         return alertas;
