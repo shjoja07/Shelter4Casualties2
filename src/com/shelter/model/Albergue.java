@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.text.Normalizer;
@@ -29,6 +30,8 @@ public class Albergue {
     private final String tipoInfraestructura;
     private final int capacidadMaxima;
     private final double areaM2;
+    /** Prefijo de los códigos de damnificado (SANMI, REFCE...). Se calcula una sola vez. */
+    private final String prefijo;
     private final List<Damnificado> damnificados = new ArrayList<>();
     private final List<Recurso> recursos = new ArrayList<>();
     private int siguienteNumeroDamnificado = 1;
@@ -61,6 +64,7 @@ public class Albergue {
                 ? INFRAESTRUCTURA_NO_ESPECIFICADA : tipoInfraestructura.trim();
         this.capacidadMaxima = capacidadMaxima;
         this.areaM2 = areaM2;
+        this.prefijo = calcularPrefijo(this.nombre);
     }
 
     // ------------------------------------------------------------------
@@ -88,7 +92,14 @@ public class Albergue {
     // Damnificados
     // ------------------------------------------------------------------
 
-    /** Aloja a un damnificado y le asigna un código propio de este refugio. */
+    /**
+     * Aloja a un damnificado y le asigna un código propio de este refugio.
+     *
+     * CORRECCIÓN: si la persona ya trae un código de este refugio (caso de la carga desde JSON) se
+     * conserva, pero el contador avanza por encima de ese número. Antes el contador volvía a 1 al
+     * reiniciar el programa y podía reutilizar el código de alguien que ya salió, mezclando su
+     * historial de entregas con el de la persona nueva. Un código repetido se regenera.
+     */
     public boolean alojar(Damnificado damnificado) {
         if (damnificado == null) {
             throw new IllegalArgumentException("El damnificado no puede ser nulo.");
@@ -99,7 +110,12 @@ public class Albergue {
                 .equalsIgnoreCase(damnificado.getNombreCompleto()))) {
             return false;
         }
-        if (!damnificado.tieneIdAsignado() || !damnificado.getId().startsWith(prefijoRefugio() + "-")) {
+        boolean conservaCodigo = damnificado.tieneIdAsignado()
+                && damnificado.getId().startsWith(prefijo + "-")
+                && buscarDamnificadoPorId(damnificado.getId()).isEmpty();
+        if (conservaCodigo) {
+            reservarNumero(damnificado.getId());
+        } else {
             damnificado.asignarId(generarIdDamnificado());
         }
         damnificados.add(damnificado);
@@ -130,12 +146,12 @@ public class Albergue {
      * Genera un prefijo legible a partir del nombre: San Miguel -> SANMI,
      * Refugio Central -> REFCE. El sufijo ordenado evita colisiones dentro del refugio.
      */
-    private String prefijoRefugio() {
+    static String calcularPrefijo(String nombre) {
         String base = Normalizer.normalize(nombre, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .replaceAll("[^A-Za-z0-9 ]", " ")
                 .trim()
-                .toUpperCase();
+                .toUpperCase(Locale.ROOT);
         String[] palabras = base.split("\\s+");
         StringBuilder prefijo = new StringBuilder();
         for (String palabra : palabras) {
@@ -153,13 +169,37 @@ public class Albergue {
         return prefijo.substring(0, Math.min(5, prefijo.length()));
     }
 
+    /** Prefijo de los códigos de este refugio. AlbergueService exige que sea único en la red. */
+    public String getPrefijo() {
+        return prefijo;
+    }
+
     private String generarIdDamnificado() {
-        String prefijo = prefijoRefugio();
         String candidato;
         do {
             candidato = prefijo + "-" + String.format("%05d", siguienteNumeroDamnificado++);
         } while (buscarDamnificadoPorId(candidato).isPresent());
         return candidato;
+    }
+
+    /** Hace que el contador quede por encima del número de un código ya existente. */
+    private void reservarNumero(String codigo) {
+        try {
+            int numero = Integer.parseInt(codigo.substring(codigo.lastIndexOf('-') + 1));
+            siguienteNumeroDamnificado = Math.max(siguienteNumeroDamnificado, numero + 1);
+        } catch (NumberFormatException ignorado) {
+            // El formato ya lo valida Damnificado.asignarId; aquí no puede ocurrir.
+        }
+    }
+
+    /** Siguiente número que se usará para un código nuevo (se guarda en el JSON). */
+    public int getSiguienteNumeroDamnificado() {
+        return siguienteNumeroDamnificado;
+    }
+
+    /** Restaura el contador guardado. Nunca lo hace retroceder (evita reutilizar códigos). */
+    public void restaurarSiguienteNumero(int siguiente) {
+        siguienteNumeroDamnificado = Math.max(siguienteNumeroDamnificado, siguiente);
     }
 
     /** Lista de solo lectura: para modificar el albergue usar alojar() / retirar(). */

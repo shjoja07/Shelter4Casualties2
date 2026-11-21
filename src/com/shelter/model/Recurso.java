@@ -2,29 +2,49 @@ package com.shelter.model;
 
 import java.time.LocalDate;
 
+/**
+ * Lote de un recurso en el inventario de un albergue.
+ *
+ * CORRECCIÓN: se validan todos los datos. Antes una cantidad NaN pasaba el control "cantidad < 0"
+ * (toda comparación con NaN es falsa) y un nombre o unidad null provocaba NullPointerException más
+ * tarde, al comparar lotes. Tipo, nombre y unidad ahora son inmutables.
+ */
 public class Recurso implements Distribuible {
-    private TipoRecurso tipo;
-    private String nombre;
-    private String unidad;
+    private final TipoRecurso tipo;
+    private final String nombre;
+    private final String unidad;
     private double cantidadDisponible;
     private LocalDate fechaVencimiento; // null si el recurso no vence
 
     public Recurso(TipoRecurso tipo, String nombre, String unidad,
                    double cantidadDisponible, LocalDate fechaVencimiento) {
-        if (cantidadDisponible < 0) {
-            throw new IllegalArgumentException("La cantidad disponible no puede ser negativa.");
+        if (tipo == null) {
+            throw new IllegalArgumentException("El tipo de recurso es obligatorio.");
         }
+        if (nombre == null || nombre.isBlank()) {
+            throw new IllegalArgumentException("El nombre del recurso no puede estar vacío.");
+        }
+        if (unidad == null || unidad.isBlank()) {
+            throw new IllegalArgumentException("La unidad del recurso no puede estar vacía.");
+        }
+        validarCantidad(cantidadDisponible);
         this.tipo = tipo;
-        this.nombre = nombre;
-        this.unidad = unidad;
+        this.nombre = nombre.trim();
+        this.unidad = unidad.trim();
         this.cantidadDisponible = cantidadDisponible;
         this.fechaVencimiento = fechaVencimiento;
+    }
+
+    private static void validarCantidad(double cantidad) {
+        if (!Double.isFinite(cantidad) || cantidad < 0) {
+            throw new IllegalArgumentException("La cantidad debe ser un número válido y no negativo.");
+        }
     }
 
     // Resta del stock la cantidad entregada
     @Override
     public void descontar(double cantidad) {
-        if (cantidad <= 0) {
+        if (!Double.isFinite(cantidad) || cantidad <= 0) {
             throw new IllegalArgumentException("La cantidad a descontar debe ser mayor que cero.");
         }
         if (cantidad > cantidadDisponible) {
@@ -36,9 +56,7 @@ public class Recurso implements Distribuible {
 
     // RF-03: Actualizar inventario (nueva cantidad y nueva fecha de vencimiento)
     public void actualizar(double nuevaCantidad, LocalDate nuevaFechaVencimiento) {
-        if (nuevaCantidad < 0) {
-            throw new IllegalArgumentException("La cantidad no puede ser negativa.");
-        }
+        validarCantidad(nuevaCantidad);
         this.cantidadDisponible = nuevaCantidad;
         this.fechaVencimiento = nuevaFechaVencimiento;
     }

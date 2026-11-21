@@ -197,3 +197,38 @@ Pautas:
 - **Sin autenticación ni concurrencia**: el sistema es de un solo usuario en un solo hilo.
 - **Persistencia**: se guarda el estado completo en cada guardado (suficiente para el tamaño del proyecto).
   No hay guardado automático tras cada operación, solo al salir o desde el menú.
+
+## Auditoría, refactorización y Centro de Comando Swing (nov. 2026)
+
+### Errores corregidos
+| Error | Consecuencia | Corrección |
+|---|---|---|
+| El contador de códigos de cada refugio volvía a 1 al reiniciar | Tras guardar y cargar, una persona nueva podía recibir el código de alguien que ya había salido y heredar su historial de entregas, lo que alteraba el orden del reparto | El contador avanza sobre los códigos cargados y se guarda en el JSON (`siguienteNumeroDamnificado`, campo opcional) |
+| Dos refugios con el mismo prefijo ("Refugio Central" y "Refugio Centro" → REFCE) | Códigos repetidos en la red; al derivar entre ellos se conservaba un código ya ocupado en el destino | `AlbergueService` exige prefijo único al registrar y al cargar; `alojar()` regenera un código repetido |
+| `Recurso` aceptaba cantidad `NaN`/infinita y nombre o unidad nulos | Inventario corrupto o `NullPointerException` al comparar lotes | Validación completa en constructor, `actualizar()` y `descontar()`; tipo, nombre y unidad son inmutables |
+| Al cerrar la ventana, un error de guardado se ignoraba | Pérdida silenciosa de datos | Se informa y el usuario decide si cierra |
+| Los combos de la GUI guardaban textos "A1 - Nombre" y se cortaban con `split(" - ")` | Fallaba con nombres que contuvieran " - " | Los combos contienen los objetos y se comparan por ID |
+| Cada refresco reescribía "cantidad por persona" | Se perdía lo que el usuario había escrito | Solo se sugiere al elegir otro recurso |
+| `registrarIngreso(null)`, `asignar(null, …)`, `reemplazarAlbergues(null)` | `NullPointerException` | `IllegalArgumentException` con mensaje claro |
+| `toLowerCase()` sin `Locale` en filtros | Comparaciones erróneas con configuración regional turca | `Locale.ROOT` |
+
+Nota: el proyecto no usa hilos propios; el "semáforo" es el indicador de estado, no `java.util.concurrent.Semaphore`.
+La animación del semáforo usa `javax.swing.Timer`, que corre en el hilo de eventos de Swing (EDT), así que no hay
+condiciones de carrera ni bloqueos, y el timer se detiene cuando el componente deja de mostrarse.
+
+### Simplificaciones
+- `evaluarRecursos` recalculaba todas las alertas Sphere dentro de un bucle para decidir el caso del agua;
+  ahora omite el AGUA porque ya la evalúa `validarMinimosSphere` (mismo resultado, sin trabajo repetido).
+- El prefijo del refugio se calcula una sola vez en el constructor.
+- `RegistroAsignacion` es inmutable.
+- Los albergues de prueba se definen en un solo lugar (`ShelterController.crearDatosDePrueba`).
+- La GUI monolítica de 1 200 líneas se dividió en vistas, componentes y tema.
+
+### Arquitectura (MVC)
+- **Modelo**: `model` + `service` (sin cambios de API salvo `getPrefijo()`, `resumenRed()` y el contador).
+- **Controlador**: `controller/ShelterController`. Es el único camino por el que la GUI modifica datos y, tras
+  cada cambio, notifica a un oyente que refresca el encabezado y las cuatro vistas desde el mismo estado.
+- **Vista**: `ui/VentanaPrincipal`, `ui/vistas/*`, `ui/componentes/*`, `ui/tema/Tema`.
+
+### Pruebas
+`PruebasShelter`: 46 exitosas (4 nuevas para estas correcciones).

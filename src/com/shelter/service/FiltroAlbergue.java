@@ -4,6 +4,8 @@ import com.shelter.model.Albergue;
 import com.shelter.model.NivelSemaforo;
 import com.shelter.model.TipoRecurso;
 
+import java.util.Locale;
+
 /**
  * Criterios para filtrar la tabla de albergues (RF-07). Cada criterio es opcional:
  * un valor null significa "no filtrar por este criterio". Los criterios se combinan con AND.
@@ -26,7 +28,7 @@ public record FiltroAlbergue(Integer cuposMinimos, String distrito,
             return false;
         }
         if (distrito != null && !distrito.isBlank()
-                && !a.getDistrito().toLowerCase().contains(distrito.trim().toLowerCase())) {
+                && !a.getDistrito().toLowerCase(Locale.ROOT).contains(distrito.trim().toLowerCase(Locale.ROOT))) {
             return false;
         }
         if (nivelAlerta != null && a.getEstadoSemaforo() != nivelAlerta) {

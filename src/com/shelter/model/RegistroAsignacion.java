@@ -4,17 +4,18 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Constancia de una entrega de recurso a un damnificado.
+ * Constancia de una entrega de recurso a un damnificado. Es inmutable: una constancia
+ * no se modifica después de emitida.
  */
 public class RegistroAsignacion {
-    private String idAlbergue;
-    private String idDamnificado;
-    private String dni;
-    private String nombreDamnificado;
-    private String recurso;
-    private String unidad;
-    private double cantidad;
-    private LocalDateTime fechaHora;
+    private final String idAlbergue;
+    private final String idDamnificado;
+    private final String dni;
+    private final String nombreDamnificado;
+    private final String recurso;
+    private final String unidad;
+    private final double cantidad;
+    private final LocalDateTime fechaHora;
 
     // Entrega nueva: la fecha y hora son las del momento
     public RegistroAsignacion(String idAlbergue, String idDamnificado, String dni, String nombreDamnificado,
