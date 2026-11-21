@@ -28,13 +28,34 @@ public class BarraNivel extends JComponent {
 
     public BarraNivel() {
         setOpaque(false);
-        setFont(Tema.fuente(java.awt.Font.BOLD, 11));
+        setFont(Tema.ETIQUETA);
     }
 
     public void setPorcentaje(double porcentaje, String texto) {
         this.porcentaje = Double.isFinite(porcentaje) ? Math.max(0, porcentaje) : 0;
         this.texto = texto;
         repaint();
+    }
+
+    /** Para lectores de pantalla: una barra de progreso que anuncia su porcentaje. */
+    @Override
+    public javax.accessibility.AccessibleContext getAccessibleContext() {
+        if (accessibleContext == null) {
+            accessibleContext = new AccessibleJComponent() {
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                public javax.accessibility.AccessibleRole getAccessibleRole() {
+                    return javax.accessibility.AccessibleRole.PROGRESS_BAR;
+                }
+
+                @Override
+                public String getAccessibleDescription() {
+                    return Math.round(porcentaje) + " %";
+                }
+            };
+        }
+        return accessibleContext;
     }
 
     public void setColorFijo(Color color) {
@@ -72,7 +93,7 @@ public class BarraNivel extends JComponent {
         int ancho = getWidth();
         Color color = colorFijo != null ? colorFijo : colorOcupacion(porcentaje);
 
-        g2.setColor(new Color(0x0A1220));
+        g2.setColor(Tema.FONDO_LATERAL);
         g2.fill(new RoundRectangle2D.Double(0, y, ancho, alto, alto, alto));
         double relleno = Math.min(1, porcentaje / 100.0) * ancho;
         if (relleno > 0) {

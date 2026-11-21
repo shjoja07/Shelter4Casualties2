@@ -4,6 +4,7 @@ import com.shelter.controller.ShelterController;
 import com.shelter.ui.componentes.Formularios;
 import com.shelter.ui.componentes.Iconos;
 import com.shelter.ui.tema.Tema;
+import com.shelter.ui.vistas.Contexto;
 import com.shelter.ui.vistas.Encabezado;
 import com.shelter.ui.vistas.PanelDamnificados;
 import com.shelter.ui.vistas.PanelHistorial;
@@ -52,10 +53,13 @@ public class VentanaPrincipal extends JFrame {
     private final JPanel contenido = new JPanel(cartas);
     private final List<BotonNavegacion> botonesNavegacion = new ArrayList<>();
 
+    /** Albergue en foco compartido por las cuatro secciones, y la navegación entre ellas. */
+    private final transient Contexto contexto = new Contexto();
+
     private final Encabezado encabezado = new Encabezado();
-    private final PanelTablero tablero = new PanelTablero(controller);
-    private final PanelDamnificados damnificados = new PanelDamnificados(controller);
-    private final PanelRecursos recursos = new PanelRecursos(controller);
+    private final PanelTablero tablero = new PanelTablero(controller, contexto);
+    private final PanelDamnificados damnificados = new PanelDamnificados(controller, contexto);
+    private final PanelRecursos recursos = new PanelRecursos(controller, contexto);
     private final PanelHistorial historial = new PanelHistorial(controller);
 
     public VentanaPrincipal() {
@@ -85,6 +89,19 @@ public class VentanaPrincipal extends JFrame {
         raiz.add(contenido, BorderLayout.CENTER);
         setContentPane(raiz);
 
+        // Navegación y acciones que resuelven alertas (desde el Tablero hacia otra sección)
+        contexto.setNavegador(s -> seleccionar(s.ordinal()));
+        contexto.setAcciones(
+                tipo -> {
+                    seleccionar(Contexto.Seccion.RECURSOS.ordinal());
+                    recursos.prepararLote(tipo);
+                },
+                () -> {
+                    seleccionar(Contexto.Seccion.DAMNIFICADOS.ordinal());
+                    damnificados.prepararDerivacion();
+                });
+        instalarAtajos(raiz);
+
         controller.agregarOyente(() -> {
             if (SwingUtilities.isEventDispatchThread()) {
                 refrescarTodo();
@@ -107,6 +124,24 @@ public class VentanaPrincipal extends JFrame {
             }
         });
         seleccionar(0);
+    }
+
+    /** Ctrl+1…4 abre cada sección desde cualquier lugar de la ventana. */
+    private void instalarAtajos(JPanel raiz) {
+        for (Contexto.Seccion s : Contexto.Seccion.values()) {
+            int n = s.ordinal() + 1;
+            javax.swing.KeyStroke tecla = javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_0 + n,
+                    java.awt.event.InputEvent.CTRL_DOWN_MASK);
+            raiz.getInputMap(JPanel.WHEN_IN_FOCUSED_WINDOW).put(tecla, "seccion" + n);
+            raiz.getActionMap().put("seccion" + n, new javax.swing.AbstractAction() {
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                public void actionPerformed(java.awt.event.ActionEvent e) {
+                    seleccionar(s.ordinal());
+                }
+            });
+        }
     }
 
     private void refrescarTodo() {
@@ -154,28 +189,19 @@ public class VentanaPrincipal extends JFrame {
         nav.setBorder(BorderFactory.createEmptyBorder(18, 12, 18, 12));
         nav.setPreferredSize(new Dimension(220, 100));
 
-        JLabel seccion = new JLabel("NAVEGACIÓN");
-        seccion.setFont(Tema.fuente(Font.BOLD, 10));
-        seccion.setForeground(Tema.TEXTO_TENUE);
-        seccion.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 0));
-        seccion.setAlignmentX(LEFT_ALIGNMENT);
-        nav.add(seccion);
-
-        agregarBoton(nav, "Tablero", "Semáforo y red", Iconos.Figura.TABLERO, "TABLERO");
+        agregarBoton(nav, "Tablero", "Qué hacer y la red", Iconos.Figura.TABLERO, "TABLERO");
         agregarBoton(nav, "Damnificados", "Ingreso y traslados", Iconos.Figura.PERSONAS, "DAMNIFICADOS");
         agregarBoton(nav, "Recursos", "Inventario y reparto", Iconos.Figura.CAJA, "RECURSOS");
         agregarBoton(nav, "Historial", "Entregas y datos", Iconos.Figura.RELOJ, "HISTORIAL");
         nav.add(Box.createVerticalGlue());
 
-        JLabel leyenda = new JLabel("<html><b style='color:#93A3BC'>CÓDIGO DE COLORES</b><br>"
-                + "<span style='color:#4FC3F7'>●</span> Agua &nbsp;<span style='color:#10B981'>●</span> Alimentos<br>"
-                + "<span style='color:#FF5A5F'>●</span> Medicina &nbsp;<span style='color:#FFA000'>●</span> Abrigo<br>"
-                + "<span style='color:#8B5CF6'>●</span> Higiene</html>");
-        leyenda.setFont(Tema.TEXTO_PEQUENO);
-        leyenda.setForeground(Tema.TEXTO_SUAVE);
-        leyenda.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
-        leyenda.setAlignmentX(LEFT_ALIGNMENT);
-        nav.add(leyenda);
+        // La leyenda de colores se quitó: cada mosaico, combo y tabla ya nombra su recurso.
+        JLabel atajos = new JLabel("<html>Ctrl+1 … Ctrl+4<br>cambia de sección</html>");
+        atajos.setFont(Tema.TEXTO_PEQUENO);
+        atajos.setForeground(Tema.TEXTO_TENUE);
+        atajos.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+        atajos.setAlignmentX(LEFT_ALIGNMENT);
+        nav.add(atajos);
         return nav;
     }
 
@@ -184,20 +210,44 @@ public class VentanaPrincipal extends JFrame {
         BotonNavegacion b = new BotonNavegacion(titulo, subtitulo, icono, carta);
         b.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void mousePressed(MouseEvent e) {
+                b.requestFocusInWindow();
                 seleccionar(indice);
             }
         });
+        // Teclado: Tab llega al botón, Enter o Espacio abre la sección
+        b.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                if (e.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER || e.getKeyCode() == java.awt.event.KeyEvent.VK_SPACE) {
+                    seleccionar(indice);
+                }
+            }
+        });
+        b.setToolTipText(subtitulo + " (Ctrl+" + (indice + 1) + ")");
         botonesNavegacion.add(b);
         nav.add(b);
         nav.add(Box.createVerticalStrut(6));
     }
 
     private void seleccionar(int indice) {
+        boolean focoEnNavegacion = false;
         for (int i = 0; i < botonesNavegacion.size(); i++) {
             botonesNavegacion.get(i).setActivo(i == indice);
+            focoEnNavegacion |= botonesNavegacion.get(i).isFocusOwner();
+        }
+        if (focoEnNavegacion) {
+            // El anillo de foco acompaña a la sección elegida (nunca dos botones resaltados)
+            botonesNavegacion.get(indice).requestFocusInWindow();
         }
         cartas.show(contenido, botonesNavegacion.get(indice).carta);
+        // Cada sección se alinea con el albergue en foco (el que se estaba mirando en otra)
+        switch (indice) {
+            case 0 -> tablero.alMostrar();
+            case 1 -> damnificados.alMostrar();
+            case 2 -> recursos.alMostrar();
+            default -> { }
+        }
     }
 
     /** Botón de la barra lateral con indicador de sección activa y efecto hover. */
@@ -216,6 +266,19 @@ public class VentanaPrincipal extends JFrame {
             this.icono = icono;
             this.carta = carta;
             setAlignmentX(LEFT_ALIGNMENT);
+            setFocusable(true);
+            setToolTipText(subtitulo);
+            addFocusListener(new java.awt.event.FocusAdapter() {
+                @Override
+                public void focusGained(java.awt.event.FocusEvent e) {
+                    repaint();
+                }
+
+                @Override
+                public void focusLost(java.awt.event.FocusEvent e) {
+                    repaint();
+                }
+            });
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
             setPreferredSize(new Dimension(196, 54));
@@ -239,6 +302,23 @@ public class VentanaPrincipal extends JFrame {
             repaint();
         }
 
+        /** Para lectores de pantalla: se anuncia como botón con su nombre. */
+        @Override
+        public javax.accessibility.AccessibleContext getAccessibleContext() {
+            if (accessibleContext == null) {
+                accessibleContext = new AccessibleJComponent() {
+                    private static final long serialVersionUID = 1L;
+
+                    @Override
+                    public javax.accessibility.AccessibleRole getAccessibleRole() {
+                        return javax.accessibility.AccessibleRole.PUSH_BUTTON;
+                    }
+                };
+                accessibleContext.setAccessibleName(titulo + ": " + subtitulo);
+            }
+            return accessibleContext;
+        }
+
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
@@ -247,13 +327,19 @@ public class VentanaPrincipal extends JFrame {
             int w = getWidth();
             int h = getHeight();
             if (activo) {
-                g2.setPaint(new GradientPaint(0, 0, Tema.alfa(Tema.ACENTO, 55), w, 0, Tema.alfa(Tema.ACENTO, 8)));
-                g2.fillRoundRect(0, 0, w, h, 14, 14);
-                g2.setColor(Tema.ACENTO);
-                g2.fillRoundRect(0, 12, 4, h - 24, 4, 4);
+                // Sección actual: tinte del acento con borde completo
+                g2.setColor(Tema.alfa(Tema.ACENTO, 34));
+                g2.fillRoundRect(0, 0, w - 1, h - 1, 14, 14);
+                g2.setColor(Tema.alfa(Tema.ACENTO, 120));
+                g2.drawRoundRect(0, 0, w - 1, h - 1, 14, 14);
             } else if (encima) {
                 g2.setColor(Tema.alfa(Color.WHITE, 10));
-                g2.fillRoundRect(0, 0, w, h, 14, 14);
+                g2.fillRoundRect(0, 0, w - 1, h - 1, 14, 14);
+            }
+            if (isFocusOwner()) {
+                g2.setStroke(new java.awt.BasicStroke(2f));
+                g2.setColor(Tema.ACENTO);
+                g2.drawRoundRect(1, 1, w - 3, h - 3, 14, 14);
             }
             Color colorIcono = activo ? Tema.ACENTO : Tema.TEXTO_SUAVE;
             Iconos.dibujar(g2, icono, 16, (h - 20) / 2.0, 20, colorIcono, Tema.mezclar(colorIcono, Color.WHITE, 0.4));

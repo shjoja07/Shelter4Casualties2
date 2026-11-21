@@ -17,7 +17,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -34,9 +33,147 @@ public final class Formularios {
     /** Error de validación de un campo: se muestra al usuario y no se modifica ningún dato. */
     public static class EntradaInvalida extends Exception {
         private static final long serialVersionUID = 1L;
+        private final transient JComponent campo;
 
         public EntradaInvalida(String mensaje) {
+            this(mensaje, null);
+        }
+
+        public EntradaInvalida(String mensaje, JComponent campo) {
             super(mensaje);
+            this.campo = campo;
+        }
+
+        /** Campo que causó el error (para marcarlo), o null. */
+        public JComponent getCampo() {
+            return campo;
+        }
+    }
+
+    // =========================================================
+    // AVISO EN LÍNEA (en lugar de ventanas modales)
+    // =========================================================
+
+    /**
+     * Mensaje de resultado dentro del propio formulario. Los errores y confirmaciones dejan de
+     * interrumpir con una ventana modal: se leen junto al formulario y el campo con el problema
+     * queda marcado en rojo hasta que se corrige.
+     */
+    public static class AvisoEnLinea extends JLabel {
+        private static final long serialVersionUID = 1L;
+        private transient JComponent campoMarcado;
+        private transient javax.swing.border.Border bordeOriginal;
+
+        public AvisoEnLinea() {
+            setFont(Tema.TEXTO_NEGRITA);
+            setBorder(BorderFactory.createEmptyBorder(6, 0, 2, 0));
+            setVisible(false);
+        }
+
+        public void error(String mensaje, JComponent campo) {
+            limpiarMarca();
+            mostrar(mensaje, Tema.mezclar(Tema.ROJO, java.awt.Color.WHITE, 0.25));
+            if (campo != null) {
+                campoMarcado = campo;
+                bordeOriginal = campo.getBorder();
+                campo.setBorder(BorderFactory.createLineBorder(Tema.ROJO, 2));
+                campo.requestFocusInWindow();
+                // La marca se quita en cuanto la persona empieza a corregir el campo
+                if (campo instanceof JTextField t) {
+                    t.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+                        @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { quitar(); }
+                        @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { quitar(); }
+                        @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { quitar(); }
+
+                        private void quitar() {
+                            t.getDocument().removeDocumentListener(this);
+                            if (campoMarcado == t) {
+                                limpiarMarca();
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        public void error(EntradaInvalida e) {
+            error(e.getMessage(), e.getCampo());
+        }
+
+        public void exito(String mensaje) {
+            limpiarMarca();
+            mostrar(mensaje, Tema.mezclar(Tema.VERDE, java.awt.Color.WHITE, 0.25));
+        }
+
+        public void limpiar() {
+            limpiarMarca();
+            setVisible(false);
+        }
+
+        private void mostrar(String mensaje, java.awt.Color color) {
+            setForeground(color);
+            setText("<html>" + Renderizadores.escapar(mensaje).replace("\n", "<br>") + "</html>");
+            setVisible(true);
+            getAccessibleContext().setAccessibleName(mensaje);
+            revalidate();
+        }
+
+        private void limpiarMarca() {
+            if (campoMarcado != null) {
+                campoMarcado.setBorder(bordeOriginal);
+                campoMarcado = null;
+            }
+        }
+    }
+
+    // =========================================================
+    // FECHA CON SELECTOR (en lugar de escribir AAAA-MM-DD)
+    // =========================================================
+
+    /** Casilla "Vence" + selector de fecha. Sin marcar = el lote no vence. */
+    public static class CampoFecha extends JPanel {
+        private static final long serialVersionUID = 1L;
+        private final JCheckBox chkVence = casilla("Vence el");
+        private final javax.swing.JSpinner spnFecha = new javax.swing.JSpinner(
+                new javax.swing.SpinnerDateModel(new java.util.Date(), null, null, java.util.Calendar.DAY_OF_MONTH));
+        private final java.awt.CardLayout cartas = new java.awt.CardLayout();
+        private final JPanel valor = new JPanel(cartas);
+
+        public CampoFecha() {
+            super(new java.awt.BorderLayout(10, 0));
+            setOpaque(false);
+            spnFecha.setEditor(new javax.swing.JSpinner.DateEditor(spnFecha, "dd/MM/yyyy"));
+            spnFecha.getAccessibleContext().setAccessibleName("Fecha de vencimiento");
+            // Sin vencimiento se lee "No vence" en vez de un selector gris deshabilitado
+            JLabel noVence = etiqueta("No vence");
+            valor.setOpaque(false);
+            valor.add(noVence, "NO");
+            valor.add(spnFecha, "SI");
+            chkVence.addActionListener(e -> mostrar());
+            add(chkVence, java.awt.BorderLayout.WEST);
+            add(valor, java.awt.BorderLayout.CENTER);
+            mostrar();
+        }
+
+        private void mostrar() {
+            cartas.show(valor, chkVence.isSelected() ? "SI" : "NO");
+        }
+
+        /** Fecha elegida, o null si el lote no vence. */
+        public LocalDate getFecha() {
+            if (!chkVence.isSelected()) {
+                return null;
+            }
+            java.util.Date d = (java.util.Date) spnFecha.getValue();
+            return d.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        }
+
+        public void setFecha(LocalDate fecha) {
+            chkVence.setSelected(fecha != null);
+            mostrar();
+            if (fecha != null) {
+                spnFecha.setValue(java.util.Date.from(fecha.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant()));
+            }
         }
     }
 
@@ -155,7 +292,7 @@ public final class Formularios {
     public static Albergue albergue(JComboBox<Albergue> combo) throws EntradaInvalida {
         Albergue a = (Albergue) combo.getSelectedItem();
         if (a == null) {
-            throw new EntradaInvalida("Seleccione un albergue.");
+            throw new EntradaInvalida("Primero registra un albergue en el Tablero.", combo);
         }
         return a;
     }
@@ -174,30 +311,15 @@ public final class Formularios {
             }
             return v;
         } catch (NumberFormatException e) {
-            campo.requestFocusInWindow();
-            throw new EntradaInvalida(nombre + " debe ser un número " + (permitirCero ? "mayor o igual a 0." : "mayor que 0."));
-        }
-    }
-
-    /** Fecha AAAA-MM-DD opcional (vacío = no vence). */
-    public static LocalDate fechaOpcional(JTextField campo) throws EntradaInvalida {
-        String texto = campo.getText().trim();
-        if (texto.isEmpty()) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(texto);
-        } catch (DateTimeParseException e) {
-            campo.requestFocusInWindow();
-            throw new EntradaInvalida("Fecha inválida. Use AAAA-MM-DD (ej. 2027-05-20) o déjela vacía.");
+            throw new EntradaInvalida(nombre + " debe ser un número " + (permitirCero ? "mayor o igual a 0." : "mayor que 0.")
+                    + " Use punto o coma para los decimales.", campo);
         }
     }
 
     public static String textoObligatorio(JTextField campo, String nombre) throws EntradaInvalida {
         String texto = campo.getText().trim();
         if (texto.isEmpty()) {
-            campo.requestFocusInWindow();
-            throw new EntradaInvalida(nombre + " es obligatorio.");
+            throw new EntradaInvalida(nombre + " es obligatorio.", campo);
         }
         return texto;
     }

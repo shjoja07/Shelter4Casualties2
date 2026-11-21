@@ -98,6 +98,34 @@ public class AsignacionRecurso {
      */
     public List<RegistroAsignacion> asignar(Albergue albergue, Recurso recurso,
                                             double cantidadTotalADistribuir, double cantidadPorPersona) {
+        List<EntregaPlanificada> plan = previsualizar(albergue, recurso, cantidadTotalADistribuir, cantidadPorPersona);
+        List<RegistroAsignacion> registrosNuevos = new ArrayList<>();
+        for (EntregaPlanificada e : plan) {
+            recurso.descontar(e.cantidad()); // el plan nunca supera el stock: no puede fallar
+            // Constancia de entrega (RNF-06: marca de tiempo)
+            RegistroAsignacion registro = new RegistroAsignacion(albergue.getId(), e.damnificado().getId(),
+                    e.damnificado().getDni(), e.damnificado().getNombreCompleto(),
+                    recurso.getNombre(), recurso.getUnidad(), e.cantidad());
+            this.historial.add(registro);
+            registrosNuevos.add(registro);
+        }
+        ultimoReparto = registrosNuevos.isEmpty() ? null : new RepartoDeshacible(albergue, recurso, registrosNuevos);
+        // El inventario cambió: el semáforo del albergue puede cambiar (ej. se acabó el agua)
+        albergueService.actualizarSemaforo(albergue);
+        return registrosNuevos;
+    }
+
+    /** Una entrega que el reparto haría: a quién y cuánto. */
+    public record EntregaPlanificada(Damnificado damnificado, double cantidad) {
+    }
+
+    /**
+     * Calcula el reparto SIN modificar nada: sirve para mostrar un resumen y pedir confirmación
+     * antes de descontar stock. asignar() usa exactamente este mismo plan, así la vista previa y
+     * el reparto real nunca difieren.
+     */
+    public List<EntregaPlanificada> previsualizar(Albergue albergue, Recurso recurso,
+                                                  double cantidadTotalADistribuir, double cantidadPorPersona) {
         if (albergue == null || recurso == null) {
             throw new IllegalArgumentException("Debe indicar el albergue y el recurso a repartir.");
         }
@@ -109,51 +137,60 @@ public class AsignacionRecurso {
         if (recurso.estaVencido(LocalDate.now())) {
             throw new IllegalArgumentException("No se puede repartir " + recurso.getNombre() + ": está VENCIDO.");
         }
-
-        List<RegistroAsignacion> registrosNuevos = new ArrayList<>();
-
-        // 1. Lista ya ordenada por prioridad (y por tiempo desde la última entrega)
-        List<Damnificado> priorizados = calcularOrdenPrioridad(albergue, recurso);
-
-        double cantidadRestante = cantidadTotalADistribuir;
-
-        // 2. Recorremos la lista ordenada para repartir
-        for (Damnificado d : priorizados) {
-            // Si ya no queda recurso para repartir o el inventario está en cero, terminamos el bucle
-            if (cantidadRestante <= EPSILON || recurso.getCantidadDisponible() <= EPSILON) {
+        List<EntregaPlanificada> plan = new ArrayList<>();
+        double restante = cantidadTotalADistribuir;
+        double stock = recurso.getCantidadDisponible();
+        // Lista ya ordenada por prioridad (y por tiempo desde la última entrega de ese recurso)
+        for (Damnificado d : calcularOrdenPrioridad(albergue, recurso)) {
+            if (restante <= EPSILON || stock <= EPSILON) {
                 break;
             }
             // La medicina solo es para quien la necesita
             if (recurso.getTipo() == TipoRecurso.MEDICINA && !d.necesitaMedicina()) {
                 continue;
             }
-
-            // CORRECCIÓN: la entrega nunca supera lo que queda por repartir NI el stock real.
-            double cantidadEntregada = Math.min(cantidadPorPersona,
-                    Math.min(cantidadRestante, recurso.getCantidadDisponible()));
-
-            recurso.descontar(cantidadEntregada); // ya no puede lanzar "stock insuficiente"
-            cantidadRestante -= cantidadEntregada;
-
-            // Creamos la constancia de entrega (RNF-06: marca de tiempo)
-            RegistroAsignacion registro = new RegistroAsignacion(
-                albergue.getId(),
-                d.getId(),
-                d.getDni(),
-                d.getNombreCompleto(),
-                recurso.getNombre(),
-                recurso.getUnidad(),
-                cantidadEntregada
-            );
-
-            // 3. Agregamos el registro a nuestra lista del historial (.add)
-            this.historial.add(registro);
-            registrosNuevos.add(registro);
+            // La entrega nunca supera lo que queda por repartir NI el stock real
+            double cantidad = Math.min(cantidadPorPersona, Math.min(restante, stock));
+            plan.add(new EntregaPlanificada(d, cantidad));
+            restante -= cantidad;
+            stock -= cantidad;
         }
+        return plan;
+    }
 
-        // El inventario cambió: el semáforo del albergue puede cambiar (ej. se acabó el agua)
-        albergueService.actualizarSemaforo(albergue);
-        return registrosNuevos;
+    // ----- Deshacer el último reparto -----
+
+    private record RepartoDeshacible(Albergue albergue, Recurso recurso, List<RegistroAsignacion> registros) {
+    }
+
+    private RepartoDeshacible ultimoReparto;
+
+    /** ¿Hay un reparto de esta sesión que todavía se pueda deshacer? */
+    public boolean puedeDeshacerUltimoReparto() {
+        return ultimoReparto != null && ultimoReparto.albergue().getRecursos().contains(ultimoReparto.recurso())
+                && historial.containsAll(ultimoReparto.registros());
+    }
+
+    /**
+     * Deshace el último reparto: devuelve la cantidad al lote y retira sus constancias del historial.
+     * Solo vale para el reparto más reciente de esta sesión y mientras el lote siga en el albergue.
+     *
+     * @return la cantidad devuelta al stock
+     */
+    public double deshacerUltimoReparto() {
+        if (!puedeDeshacerUltimoReparto()) {
+            throw new IllegalArgumentException("No hay un reparto reciente que se pueda deshacer.");
+        }
+        RepartoDeshacible r = ultimoReparto;
+        double devuelto = 0;
+        for (RegistroAsignacion reg : r.registros()) {
+            devuelto += reg.getCantidad();
+        }
+        r.recurso().actualizar(r.recurso().getCantidadDisponible() + devuelto, r.recurso().getFechaVencimiento());
+        historial.removeAll(r.registros());
+        ultimoReparto = null;
+        albergueService.actualizarSemaforo(r.albergue());
+        return devuelto;
     }
 
     private static void validarCantidad(double cantidad, String nombre) {
@@ -171,5 +208,6 @@ public class AsignacionRecurso {
     public void reemplazarHistorial(List<RegistroAsignacion> nuevo) {
         historial.clear();
         historial.addAll(nuevo);
+        ultimoReparto = null; // tras cargar otro estado ya no hay nada que deshacer
     }
 }

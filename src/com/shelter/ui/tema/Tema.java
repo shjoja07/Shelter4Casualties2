@@ -23,11 +23,14 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Tema "Centro de Comando de Emergencias": fondo Dark Slate con alto contraste.
+ * Tema "Grafito sobrio".
  *
- * Toda la interfaz toma sus colores y fuentes de aquí, de modo que cada tipo de recurso, nivel de
- * semáforo, prioridad y tipo de damnificado tiene SIEMPRE el mismo color en tarjetas, chips,
- * barras e iconos. Cambiar un color en esta clase lo cambia en toda la aplicación.
+ * Una sola regla de color: en la pantalla solo tiene color lo que indica un ESTADO (rojo, ámbar,
+ * verde del semáforo, y la prioridad cuando es urgente). Superficies, texto, recursos, tipos de
+ * damnificado y acciones son neutros. Así, cuando algo se ve rojo, es porque requiere atención.
+ *
+ * Reemplaza al tema anterior "azul marino con neón" (acento cian, resplandores), que era el look por
+ * defecto de cualquier "centro de comando". Toda la interfaz toma de aquí sus colores y fuentes.
  */
 public final class Tema {
 
@@ -35,28 +38,39 @@ public final class Tema {
     }
 
     // ------------------------------------------------------------------
-    // Superficies y texto (Dark Slate)
+    // Superficies y texto: grafito neutro, sin tinte azul
     // ------------------------------------------------------------------
-    public static final Color FONDO = new Color(0x0B1220);
-    public static final Color FONDO_LATERAL = new Color(0x0E1627);
-    public static final Color SUPERFICIE = new Color(0x152033);
-    public static final Color SUPERFICIE_ALTA = new Color(0x1C2A41);
-    public static final Color CAMPO = new Color(0x0F1A2B);
-    public static final Color BORDE = new Color(0x2A3A55);
-    public static final Color BORDE_SUAVE = new Color(0x1F2D45);
-    public static final Color TEXTO = new Color(0xE6EDF7);
-    public static final Color TEXTO_SUAVE = new Color(0x93A3BC);
-    public static final Color TEXTO_TENUE = new Color(0x5E6F8A);
-    public static final Color ACENTO = new Color(0x38BDF8);
-    public static final Color ACENTO_OSCURO = new Color(0x0369A1);
-    public static final Color SELECCION = new Color(0x1E3A5F);
+    public static final Color FONDO = new Color(0x18181A);
+    public static final Color FONDO_LATERAL = new Color(0x141416);
+    public static final Color SUPERFICIE = new Color(0x222225);
+    public static final Color SUPERFICIE_ALTA = new Color(0x26262A);
+    /** Fila alterna de tablas y listas. */
+    public static final Color FILA_ALTERNA = new Color(0x1E1E21);
+    public static final Color CAMPO = new Color(0x1B1B1E);
+    public static final Color BORDE = new Color(0x3A3A40);
+    public static final Color BORDE_SUAVE = new Color(0x34343A);
+    public static final Color TEXTO = new Color(0xF2F1EE);
+    /** Texto secundario: 8.6:1 sobre SUPERFICIE (un proyector se come el contraste fino). */
+    public static final Color TEXTO_SUAVE = new Color(0xB9B7B1);
+    /** Texto terciario: 5.0:1 sobre SUPERFICIE (cumple AA). */
+    public static final Color TEXTO_TENUE = new Color(0x908E88);
+    /** Foco, selección y elemento activo: claro, no un color (el color queda para los estados). */
+    public static final Color ACENTO = new Color(0xE9E7E1);
+    /** Fondo de la acción principal (botón claro sobre grafito). */
+    public static final Color ACCION = new Color(0xE9E7E1);
+    /** Texto e iconos sobre la acción principal. */
+    public static final Color TINTA_ACCION = new Color(0x18181A);
+    public static final Color ACENTO_OSCURO = ACCION;
+    public static final Color SELECCION = new Color(0x3A3A41);
 
     // ------------------------------------------------------------------
-    // Semáforo
+    // Semáforo: los únicos colores saturados de la interfaz
     // ------------------------------------------------------------------
-    public static final Color VERDE = new Color(0x22C55E);
-    public static final Color AMARILLO = new Color(0xFACC15);
-    public static final Color ROJO = new Color(0xEF4444);
+    public static final Color VERDE = new Color(0x3FA34D);
+    public static final Color AMARILLO = new Color(0xE3A008);
+    public static final Color ROJO = new Color(0xE5484D);
+    /** Rojo para fondos de botón con texto blanco (5.5:1). */
+    public static final Color ROJO_BOTON = new Color(0xC2353A);
 
     public static Color color(NivelSemaforo nivel) {
         return switch (nivel) {
@@ -74,42 +88,46 @@ public final class Tema {
     public record PaletaRecurso(Color principal, Color secundario, String nombre) {
     }
 
+    /**
+     * Los recursos ya no tienen color propio: un recurso no es un estado. Se distinguen por su
+     * nombre y su icono monocromo; el color aparece solo si falta (rojo).
+     */
     public static PaletaRecurso paleta(TipoRecurso tipo) {
-        return switch (tipo) {
-            // Hidratación: azul profundo / cian
-            case AGUA -> new PaletaRecurso(new Color(0x0288D1), new Color(0x4FC3F7), "Agua");
-            // Víveres: verde esmeralda / naranja cálido
-            case ALIMENTO -> new PaletaRecurso(new Color(0x10B981), new Color(0xFB8C00), "Alimentos");
-            // Salud: rojo coral / blanco clínico
-            case MEDICINA -> new PaletaRecurso(new Color(0xFF5A5F), new Color(0xF8FAFC), "Medicina");
-            // Refugio y abrigo: ámbar / amarillo
-            case ABRIGO -> new PaletaRecurso(new Color(0xFFA000), new Color(0xFFD54F), "Abrigo");
-            // Higiene: lavanda / lila (limpieza)
-            case HIGIENE -> new PaletaRecurso(new Color(0x8B5CF6), new Color(0xC4B5FD), "Higiene");
+        String nombre = switch (tipo) {
+            case AGUA -> "Agua";
+            case ALIMENTO -> "Alimentos";
+            case MEDICINA -> "Medicina";
+            case ABRIGO -> "Abrigo";
+            case HIGIENE -> "Higiene";
         };
+        return new PaletaRecurso(TEXTO_SUAVE, TEXTO, nombre);
     }
 
     // ------------------------------------------------------------------
-    // Prioridad de damnificados
+    // Prioridad de damnificados: color solo cuando es urgente
     // ------------------------------------------------------------------
     public static Color color(NivelPrioridad nivel) {
         return switch (nivel) {
-            case CRITICA -> new Color(0xF43F5E);
-            case ALTA -> new Color(0xFB923C);
-            case MEDIA -> new Color(0xFACC15);
-            case BAJA -> new Color(0x60A5FA);
+            case CRITICA -> ROJO;
+            case ALTA -> AMARILLO;
+            case MEDIA -> TEXTO_SUAVE;
+            case BAJA -> TEXTO_TENUE;
         };
     }
 
-    /** Color y nombre del tipo de damnificado (General, Menor, Vulnerable). */
+    /** ¿Esta prioridad merece pastilla de color? Solo CRÍTICA y ALTA; MEDIA y BAJA van como texto. */
+    public static boolean esUrgente(NivelPrioridad nivel) {
+        return nivel == NivelPrioridad.CRITICA || nivel == NivelPrioridad.ALTA;
+    }
+
+    /** El tipo de damnificado (General, Menor, Vulnerable) no es un estado: texto neutro. */
     public static Color colorTipo(Damnificado d) {
-        if (d instanceof DamnificadoVulnerable) {
-            return new Color(0xC084FC);
-        }
-        if (d instanceof DamnificadoMenor) {
-            return new Color(0x2DD4BF);
-        }
-        return new Color(0x94A3B8);
+        return TEXTO_SUAVE;
+    }
+
+    /** Color en formato #RRGGBB para etiquetas HTML de Swing. */
+    public static String hex(Color c) {
+        return String.format("#%02X%02X%02X", c.getRed(), c.getGreen(), c.getBlue());
     }
 
     public static String nombreTipo(Damnificado d) {
@@ -164,12 +182,16 @@ public final class Tema {
         return new Font(FAMILIA_MONO, estilo, Math.round(tamano));
     }
 
-    public static final Font TEXTO_NORMAL = fuente(Font.PLAIN, 13);
-    public static final Font TEXTO_NEGRITA = fuente(Font.BOLD, 13);
-    public static final Font TEXTO_PEQUENO = fuente(Font.PLAIN, 11);
-    public static final Font TITULO_TARJETA = fuente(Font.BOLD, 12);
+    // Escala pensada para proyector: nada por debajo de 12 px; el texto de lectura a 14 px.
+    // Pasos cortos (12 · 14 · 16 · 20): en una herramienta de trabajo la jerarquía la dan el
+    // peso y la posición, no tamaños exagerados.
+    public static final Font TEXTO_NORMAL = fuente(Font.PLAIN, 14);
+    public static final Font TEXTO_NEGRITA = fuente(Font.BOLD, 14);
+    public static final Font TEXTO_PEQUENO = fuente(Font.PLAIN, 12);
+    public static final Font ETIQUETA = fuente(Font.BOLD, 12);
+    public static final Font TITULO_TARJETA = fuente(Font.BOLD, 14);
+    public static final Font SUBTITULO = fuente(Font.BOLD, 16);
     public static final Font TITULO = fuente(Font.BOLD, 20);
-    public static final Font CIFRA = fuente(Font.BOLD, 22);
 
     // ------------------------------------------------------------------
     // Instalación del Look & Feel
@@ -183,18 +205,18 @@ public final class Tema {
     public static void instalar() {
         UIManager.put("control", SUPERFICIE);
         UIManager.put("info", SUPERFICIE_ALTA);
-        UIManager.put("nimbusBase", new Color(0x1A2740));
-        UIManager.put("nimbusBlueGrey", new Color(0x2A3A55));
+        UIManager.put("nimbusBase", new Color(0x2A2A2E));
+        UIManager.put("nimbusBlueGrey", new Color(0x3A3A40));
         UIManager.put("nimbusLightBackground", CAMPO);
-        UIManager.put("nimbusFocus", ACENTO);
-        UIManager.put("nimbusSelectionBackground", ACENTO_OSCURO);
+        UIManager.put("nimbusFocus", new Color(0x9A9892));
+        UIManager.put("nimbusSelectionBackground", SELECCION);
         UIManager.put("nimbusSelectedText", Color.WHITE);
         UIManager.put("nimbusDisabledText", TEXTO_TENUE);
-        UIManager.put("nimbusInfoBlue", ACENTO);
+        UIManager.put("nimbusInfoBlue", TEXTO_SUAVE);
         UIManager.put("nimbusAlertYellow", AMARILLO);
         UIManager.put("nimbusRed", ROJO);
         UIManager.put("nimbusGreen", VERDE);
-        UIManager.put("nimbusOrange", new Color(0xFB923C));
+        UIManager.put("nimbusOrange", AMARILLO);
         UIManager.put("text", TEXTO);
         UIManager.put("textForeground", TEXTO);
         UIManager.put("textBackground", CAMPO);
@@ -221,7 +243,7 @@ public final class Tema {
         UIManager.put("Panel.background", new ColorUIResource(SUPERFICIE));
         UIManager.put("ToolTip.background", new ColorUIResource(SUPERFICIE_ALTA));
         UIManager.put("ToolTip.foreground", new ColorUIResource(TEXTO));
-        UIManager.put("Table.alternateRowColor", new Color(0x121C2E));
+        UIManager.put("Table.alternateRowColor", FILA_ALTERNA);
 
         // Combos oscuros: Nimbus pinta su fondo con "painters" grises; se reemplazan por uno propio.
         javax.swing.Painter<javax.swing.JComponent> fondoCombo = (g, c, w, h) -> pintarCampo(g, w, h, c.hasFocus());
@@ -236,7 +258,7 @@ public final class Tema {
         // Campos de texto deshabilitados: oscuros, no azul grisáceo
         UIManager.put("TextField[Disabled].backgroundPainter",
                 (javax.swing.Painter<javax.swing.JComponent>) (g, c, w, h) -> {
-                    g.setColor(new Color(0x111A29));
+                    g.setColor(FONDO_LATERAL);
                     g.fillRect(0, 0, w, h);
                 });
     }
@@ -263,7 +285,7 @@ public final class Tema {
         tabla.setGridColor(BORDE_SUAVE);
         tabla.setShowVerticalLines(false);
         tabla.setShowHorizontalLines(true);
-        tabla.setRowHeight(34);
+        tabla.setRowHeight(38);
         tabla.setIntercellSpacing(new java.awt.Dimension(0, 1));
         tabla.setSelectionBackground(SELECCION);
         tabla.setSelectionForeground(Color.WHITE);
