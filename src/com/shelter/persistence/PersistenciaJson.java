@@ -94,6 +94,8 @@ public final class PersistenciaJson {
         m.put("areaM2", a.getAreaM2());
         m.put("capacidadMaxima", a.getCapacidadMaxima());
         m.put("ocupacionActual", a.getOcupacionActual());
+        // Contador de códigos: evita reutilizar el código de alguien que ya salió del refugio.
+        m.put("siguienteNumeroDamnificado", a.getSiguienteNumeroDamnificado());
         // El semáforo se guarda solo como información: al cargar se RECALCULA (es un valor derivado)
         m.put("estadoSemaforo", a.getEstadoSemaforo().name());
 
@@ -218,6 +220,10 @@ public final class PersistenciaJson {
                 throw new IllegalArgumentException("No se pudo alojar al ID " + d.getId()
                         + " en el albergue '" + a.getId() + "' (capacidad excedida o ID repetido).");
             }
+        }
+        Object siguiente = m.get("siguienteNumeroDamnificado"); // opcional: archivos antiguos no lo traen
+        if (siguiente != null) {
+            a.restaurarSiguienteNumero(entero(m, "siguienteNumeroDamnificado"));
         }
         // La ocupación guardada debe coincidir con las personas guardadas (la ocupación ya no es un contador aparte)
         if (entero(m, "ocupacionActual") != a.getOcupacionActual()) {

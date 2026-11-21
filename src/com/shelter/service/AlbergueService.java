@@ -62,9 +62,25 @@ public class AlbergueService {
         if (buscarPorId(albergue.getId()).isPresent()) {
             return false;
         }
+        validarPrefijoLibre(albergue, albergues);
         albergues.add(albergue);
         actualizarSemaforo(albergue);
         return true;
+    }
+
+    /**
+     * CORRECCIÓN: dos refugios con el mismo prefijo ("Refugio Central" y "Refugio Centro" generan
+     * REFCE) repartían los mismos códigos (REFCE-00001 en ambos), y al derivar entre ellos la persona
+     * conservaba su código aunque ya estuviera ocupado en el destino. Ahora el prefijo debe ser único.
+     */
+    private static void validarPrefijoLibre(Albergue nuevo, List<Albergue> existentes) {
+        for (Albergue a : existentes) {
+            if (a.getPrefijo().equals(nuevo.getPrefijo())) {
+                throw new IllegalArgumentException("El nombre '" + nuevo.getNombre() + "' genera el prefijo de códigos "
+                        + nuevo.getPrefijo() + ", que ya usa el albergue " + a.getId() + " (" + a.getNombre()
+                        + "). Use un nombre más distintivo.");
+            }
+        }
     }
 
     public Optional<Albergue> buscarPorId(String id) {
@@ -108,6 +124,9 @@ public class AlbergueService {
 
     /** RF-02: registra el ingreso (la prioridad se calcula en el propio damnificado). */
     public ResultadoIngreso registrarIngreso(String idAlbergue, Damnificado damnificado) {
+        if (damnificado == null) {
+            throw new IllegalArgumentException("El damnificado no puede ser nulo.");
+        }
         Optional<Albergue> opt = buscarPorId(idAlbergue);
         if (opt.isEmpty()) {
             return ResultadoIngreso.ALBERGUE_NO_ENCONTRADO;
@@ -234,6 +253,31 @@ public class AlbergueService {
         return resultado;
     }
 
+    /** Resumen de toda la red: alimenta el encabezado del centro de comando. */
+    public record ResumenRed(int albergues, int ocupacion, int capacidad,
+                             int verdes, int amarillos, int rojos, NivelSemaforo peorEstado) {
+        public double porcentajeOcupacion() {
+            return capacidad == 0 ? 0 : ocupacion * 100.0 / capacidad;
+        }
+    }
+
+    public ResumenRed resumenRed() {
+        actualizarTodosLosSemaforos();
+        int ocupacion = 0, capacidad = 0, verdes = 0, amarillos = 0, rojos = 0;
+        NivelSemaforo peor = NivelSemaforo.VERDE;
+        for (Albergue a : albergues) {
+            ocupacion += a.getOcupacionActual();
+            capacidad += a.getCapacidadMaxima();
+            switch (a.getEstadoSemaforo()) {
+                case VERDE -> verdes++;
+                case AMARILLO -> amarillos++;
+                case ROJO -> rojos++;
+            }
+            peor = NivelSemaforo.peor(peor, a.getEstadoSemaforo());
+        }
+        return new ResumenRed(albergues.size(), ocupacion, capacidad, verdes, amarillos, rojos, peor);
+    }
+
     // =========================================================
     // RECURSOS (RF-03)
     // =========================================================
@@ -357,10 +401,11 @@ public class AlbergueService {
         if (albergue.getOcupacionActual() > 0) {
             for (TipoRecurso tipo : TipoRecurso.values()) {
                 // Un recurso crítico ausente también es una carencia; no se confunde
-                // "sin registro" con "sin necesidad". El agua además se valida por litros.
-                if (tipo.esCritico() && !albergue.tieneRecursoDisponible(tipo)
-                        && (tipo != TipoRecurso.AGUA || validarMinimosSphere(albergue).stream()
-                        .noneMatch(a -> a.codigo().equals("AGUA")))) {
+                // "sin registro" con "sin necesidad". El AGUA se omite aquí porque ya la evalúa
+                // validarMinimosSphere en litros por persona (sin agua => alerta ROJA de Sphere).
+                // Antes se recalculaban todas las alertas Sphere dentro del bucle para llegar al
+                // mismo resultado.
+                if (tipo.esCritico() && tipo != TipoRecurso.AGUA && !albergue.tieneRecursoDisponible(tipo)) {
                     alertas.add(new Alerta(NivelSemaforo.ROJO, "RECURSO_FALTANTE",
                             "Sin stock vigente del recurso crítico " + tipo + "."));
                 }
@@ -425,12 +470,20 @@ public class AlbergueService {
      * IllegalArgumentException y NO modifica el estado actual.
      */
     public void reemplazarAlbergues(List<Albergue> nuevos) {
+        if (nuevos == null) {
+            throw new IllegalArgumentException("La lista de albergues no puede ser nula.");
+        }
+        List<Albergue> revisados = new ArrayList<>();
+        for (Albergue a : nuevos) {
+            validarPrefijoLibre(a, revisados);
+            revisados.add(a);
+        }
         Set<String> ids = new HashSet<>();
         Set<String> dnis = new HashSet<>();
         Set<String> nombres = new HashSet<>();
         Set<String> idsDamnificados = new HashSet<>();
         for (Albergue a : nuevos) {
-            if (!ids.add(a.getId().toLowerCase())) {
+            if (!ids.add(a.getId().toLowerCase(Locale.ROOT))) {
                 throw new IllegalArgumentException("ID de albergue repetido: " + a.getId());
             }
             for (Damnificado d : a.getDamnificados()) {

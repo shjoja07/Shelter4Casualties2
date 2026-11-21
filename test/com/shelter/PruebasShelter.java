@@ -556,6 +556,61 @@ public class PruebasShelter {
         });
 
         // ------------------------------------------------------------------
+        // ------------------------------------------------------------------
+        System.out.println("\n[Correcciones de la auditoría]");
+        prueba("dos albergues con el mismo prefijo de códigos se rechazan", () -> {
+            AlbergueService s = new AlbergueService();
+            s.registrarAlbergue(new Albergue("C1", "Refugio Central", "Lima", 10));
+            esperarExcepcion(() -> s.registrarAlbergue(new Albergue("C2", "Refugio Centro", "Lima", 10)),
+                    "REFCE ya está en uso");
+            verificar(s.getAlbergues().size() == 1, "no se agregó el segundo albergue");
+        });
+
+        prueba("tras guardar y cargar no se reutiliza el código de quien ya salió", () -> {
+            AlbergueService s = new AlbergueService();
+            s.registrarAlbergue(new Albergue("S1", "San Miguel", "Lima", 10));
+            for (int i = 0; i < 3; i++) {
+                s.registrarIngreso("S1", general(30));
+            }
+            Albergue a = s.buscarPorId("S1").get();
+            String ultimo = a.getDamnificados().get(2).getId();
+            verificar(ultimo.equals("SANMI-00003"), "el tercero es SANMI-00003");
+            s.registrarSalida("S1", ultimo);
+
+            Path tmp = Files.createTempFile("shelter", ".json");
+            try {
+                PersistenciaJson.guardar(tmp, s.getAlbergues(), List.of());
+                AlbergueService s2 = new AlbergueService();
+                s2.reemplazarAlbergues(PersistenciaJson.cargar(tmp).albergues());
+                Damnificado nuevo = general(40);
+                s2.registrarIngreso("S1", nuevo);
+                verificar(nuevo.getId().equals("SANMI-00004"), "se esperaba SANMI-00004 y fue " + nuevo.getId());
+            } finally {
+                Files.deleteIfExists(tmp);
+            }
+        });
+
+        prueba("un recurso con cantidad NaN, nombre o unidad vacíos se rechaza", () -> {
+            esperarExcepcion(() -> new Recurso(TipoRecurso.AGUA, "Agua", "litros", Double.NaN, null), "NaN");
+            esperarExcepcion(() -> new Recurso(TipoRecurso.AGUA, " ", "litros", 5, null), "nombre vacío");
+            esperarExcepcion(() -> new Recurso(TipoRecurso.AGUA, "Agua", null, 5, null), "unidad null");
+            esperarExcepcion(() -> new Recurso(null, "Agua", "litros", 5, null), "tipo null");
+            Recurso r = agua(10);
+            esperarExcepcion(() -> r.actualizar(Double.POSITIVE_INFINITY, null), "infinito");
+            esperarExcepcion(() -> r.descontar(Double.NaN), "descontar NaN");
+            verificar(r.getCantidadDisponible() == 10, "el stock no cambió");
+        });
+
+        prueba("el resumen de la red cuenta albergues por estado", () -> {
+            AlbergueService s = servicioConDosAlbergues();
+            s.registrarIngreso("A1", general(30));
+            s.registrarIngreso("A1", general(30)); // A1 lleno (2/2) => ROJO
+            AlbergueService.ResumenRed r = s.resumenRed();
+            verificar(r.albergues() == 2 && r.ocupacion() == 2 && r.capacidad() == 7, "totales");
+            verificar(r.rojos() >= 1 && r.peorEstado() == NivelSemaforo.ROJO, "peor estado ROJO");
+            verificar(r.verdes() + r.amarillos() + r.rojos() == 2, "suma de estados");
+        });
+
         System.out.println("\n[Rendimiento (RNF-02)]");
         prueba("calcular prioridad y repartir con 2000 ocupantes tarda menos de 5 s", () -> {
             AlbergueService s = new AlbergueService();

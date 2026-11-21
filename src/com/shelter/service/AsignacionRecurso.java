@@ -98,6 +98,9 @@ public class AsignacionRecurso {
      */
     public List<RegistroAsignacion> asignar(Albergue albergue, Recurso recurso,
                                             double cantidadTotalADistribuir, double cantidadPorPersona) {
+        if (albergue == null || recurso == null) {
+            throw new IllegalArgumentException("Debe indicar el albergue y el recurso a repartir.");
+        }
         validarCantidad(cantidadTotalADistribuir, "La cantidad a distribuir");
         validarCantidad(cantidadPorPersona, "La cantidad por persona");
         if (!albergue.getRecursos().contains(recurso)) {

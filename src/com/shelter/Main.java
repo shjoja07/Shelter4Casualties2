@@ -1,5 +1,6 @@
 package com.shelter;
 
+import com.shelter.controller.ShelterController;
 import com.shelter.model.Albergue;
 import com.shelter.model.Alerta;
 import com.shelter.model.Damnificado;
@@ -45,12 +46,15 @@ public class Main{
     private static final AlbergueService albergueService = new AlbergueService();
     private static final AsignacionRecurso asignacionService = new AsignacionRecurso(albergueService);
 
+    /**
+     * Sin argumentos abre la interfaz gráfica (Centro de Comando).
+     * Con cualquier argumento, por ejemplo --consola, abre el menú de consola.
+     */
     public static void main(String[] args) {
-        
         if (args.length == 0) {
-        com.shelter.ui.VentanaPrincipal.main(args);
-        return;
-}
+            com.shelter.ui.VentanaPrincipal.main(args);
+            return;
+        }
         iniciarDatos();
 
         boolean salir = false;
@@ -96,9 +100,8 @@ public class Main{
             }
             System.out.println("No se pudo usar el archivo guardado; se inicia con datos de prueba.");
         }
-        // Albergues de prueba iniciales (ahora con tipo de infraestructura y área en m²)
-        albergueService.registrarAlbergue(new Albergue("A1", "Refugio Central", "Lima Centro", "Coliseo", 2, 14));
-        albergueService.registrarAlbergue(new Albergue("A2", "Refugio Norte", "Los Olivos", "Colegio", 5, 40));
+        // Albergues de prueba iniciales: los mismos que usa la interfaz gráfica
+        ShelterController.crearDatosDePrueba(albergueService);
     }
 
     // =========================================================
